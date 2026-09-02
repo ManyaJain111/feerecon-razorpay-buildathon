@@ -95,7 +95,7 @@ Tested on a synthetic settlement batch of **83 transactions** against `data/grou
 
 ---
 
-## Quickstart
+## Quickstart (Local Dev)
 
 ### 1. Installation
 
@@ -124,7 +124,7 @@ python3 run.py --extract --force
 python3 run.py --update-dispute TXN_123 --dispute-status resolved --resolution-amount 576.01
 ```
 
-### 3. Launch Web UI Dashboard
+### 3. Launch Web UI Dashboard (local)
 
 ```bash
 python3 run.py --ui
@@ -141,6 +141,150 @@ python3 -m pytest -v
 
 ```bash
 python3 run.py --benchmark
+```
+
+---
+
+## Deploying to Azure App Service
+
+The app runs as a native Python 3.11 app on Azure App Service (Linux).
+CI/CD is handled by GitHub Actions (`.github/workflows/azure-deploy.yml`):
+every push to `main` runs the test suite and, on success, deploys automatically.
+
+### Prerequisites
+
+- Azure CLI installed and logged in (`az login`)
+- A GitHub repo with this code
+- An Azure subscription
+
+### Step 1 — Create the App Service
+
+```bash
+# Variables — change these to match your setup
+RESOURCE_GROUP=rg-feerecon
+APP_NAME=razorpay-fee-detector      # must be globally unique
+LOCATION=eastus
+PLAN_NAME=plan-feerecon
+
+# Create resource group
+az group create --name $RESOURCE_GROUP --location $LOCATION
+
+# Create App Service Plan (B1 = ~$13/mo; use F1 for free tier)
+az appservice plan create \
+  --name $PLAN_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --sku B1 \
+  --is-linux
+
+# Create the Web App with Python 3.11 runtime
+az webapp create \
+  --name $APP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --plan $PLAN_NAME \
+  --runtime "PYTHON:3.11"
+
+# Set the startup script
+# startup.sh runs: gunicorn -w 2 -k uvicorn.workers.UvicornWorker server:app
+# (server.py exposes a module-level `app = create_app()` FastAPI instance)
+az webapp config set \
+  --name $APP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --startup-file "startup.sh"
+```
+
+### Step 2 — Set Environment Variables (App Settings)
+
+```bash
+az webapp config appsettings set \
+  --name $APP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --settings \
+    ANTHROPIC_API_KEY="<your-key-or-leave-blank>" \
+    OPENAI_API_KEY="<your-key-or-leave-blank>" \
+    SCM_DO_BUILD_DURING_DEPLOYMENT=true
+```
+
+> **Note:** Without API keys the app uses the deterministic offline parser — fully functional with no LLM costs.
+
+### Step 3 — Create the GitHub Actions Service Principal
+
+```bash
+az ad sp create-for-rbac \
+  --name "sp-feerecon-github" \
+  --role contributor \
+  --scopes /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/$RESOURCE_GROUP \
+  --sdk-auth
+```
+
+Copy the full JSON output. In your GitHub repo go to:
+**Settings → Secrets and variables → Actions → New repository secret**
+
+| Secret name | Value |
+|---|---|
+| `AZURE_CREDENTIALS` | *(paste the full JSON from the command above)* |
+
+### Step 4 — Trigger Deployment
+
+Push to `main` (or go to **Actions → Deploy to Azure App Service → Run workflow**).
+
+The pipeline will:
+1. Run `pytest` — aborts deployment if any test fails
+2. Install dependencies into `.python_packages/`
+3. Zip-deploy the app to Azure App Service
+
+### Step 5 — Verify
+
+```bash
+# Health check
+curl https://$APP_NAME.azurewebsites.net/health
+
+# Open in browser
+az webapp browse --name $APP_NAME --resource-group $RESOURCE_GROUP
+```
+
+### Persistent Storage for Reports (optional but recommended)
+
+Azure App Service has an ephemeral local filesystem. To persist audit reports across restarts, mount an Azure Files share:
+
+```bash
+# Create storage account
+az storage account create \
+  --name stfeerecon \
+  --resource-group $RESOURCE_GROUP \
+  --sku Standard_LRS
+
+# Create file share
+az storage share create --name reports --account-name stfeerecon
+
+# Mount to /home/site/wwwroot/reports
+az webapp config storage-account add \
+  --name $APP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --custom-id ReportsMount \
+  --storage-type AzureFiles \
+  --account-name stfeerecon \
+  --share-name reports \
+  --mount-path /home/site/wwwroot/reports \
+  --access-key "$(az storage account keys list --account-name stfeerecon --query '[0].value' -o tsv)"
+```
+
+### Useful Azure CLI Commands
+
+```bash
+# Stream live logs
+az webapp log tail --name $APP_NAME --resource-group $RESOURCE_GROUP
+
+# SSH into the app (Kudu console)
+az webapp ssh --name $APP_NAME --resource-group $RESOURCE_GROUP
+
+# Restart
+az webapp restart --name $APP_NAME --resource-group $RESOURCE_GROUP
+
+# Scale up (e.g., to P2v3 for higher throughput)
+az appservice plan update \
+  --name $PLAN_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --sku P2v3
 ```
 
 ---
@@ -300,14 +444,23 @@ confidence_thresholds:
   low: 0.0
 ```
 
-### Environment Variables
+#### Environment Variables
 
 | Variable | Purpose |
-|----------|---------|
+|----------|---------| 
 | `ANTHROPIC_API_KEY` | Enables LLM-based extraction (Claude 3.5 Sonnet) |
 | `OPENAI_API_KEY` | Alternative LLM provider (if configured) |
 
 *Without API keys: Uses deterministic offline parser (100% reproducible)*
+
+**On Azure App Service**, set these via the portal (*Configuration → Application settings*) or with the CLI:
+
+```bash
+az webapp config appsettings set \
+  --name $APP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --settings ANTHROPIC_API_KEY="sk-..." OPENAI_API_KEY="sk-..."
+```
 
 ---
 
@@ -317,8 +470,12 @@ confidence_thresholds:
 .
 ├── run.py                      # Primary CLI orchestrator
 ├── server.py                   # FastAPI Web UI server
+├── startup.sh                  # Azure App Service startup script
 ├── requirements.txt            # Project dependencies
 ├── .gitignore
+├── .github/
+│   └── workflows/
+│       └── azure-deploy.yml    # GitHub Actions CI/CD → Azure App Service
 ├── config/
 │   └── severity_thresholds.yaml
 ├── data/

@@ -709,8 +709,14 @@ def create_app():
 
 try:
     app = create_app()
-except Exception:
+except ImportError as _e:
+    # FastAPI / uvicorn not installed — fall back to plain HTTP server
+    import warnings
+    warnings.warn(f"FastAPI unavailable, falling back to built-in HTTP server: {_e}")
     app = None
+except Exception as _e:
+    # Re-raise anything else so gunicorn / Azure surfaces the real error
+    raise RuntimeError(f"Failed to initialise FastAPI application: {_e}") from _e
 
 def start_server(port: int = 8000):
     if app is not None:
