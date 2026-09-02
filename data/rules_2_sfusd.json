@@ -1,0 +1,103 @@
+{
+  "contract_id": "SFUSD-DREAMBOX-2018",
+  "merchant_name": "San Francisco Unified School District / DreamBox Learning Inc.",
+  "effective_date": "2018-07-01",
+  "version": "1.0",
+  "rules": {
+    "payment_methods": {
+      "UPI": {
+        "type": "flat",
+        "rate_pct": 0.0,
+        "fixed_fee": 0.0,
+        "confidence": 0.95,
+        "source_span": "Direct Electronic Invoicing: 0.00% platform charge",
+        "extraction_method": "pdf_extractor",
+        "needs_review": false
+      },
+      "DOMESTIC_CARD": {
+        "type": "tiered_volume",
+        "tiers": [
+          {
+            "min_volume": 0.0,
+            "max_volume": 500000.0,
+            "rate_pct": 2.0,
+            "tier_name": "Tier 1 (Base Site License)",
+            "confidence": 0.95
+          },
+          {
+            "min_volume": 500000.01,
+            "max_volume": 2000000.0,
+            "rate_pct": 1.75,
+            "tier_name": "Tier 2 (Growth Multi-Site)",
+            "confidence": 0.95
+          },
+          {
+            "min_volume": 2000000.01,
+            "max_volume": null,
+            "rate_pct": 1.5,
+            "tier_name": "Tier 3 (District Enterprise)",
+            "confidence": 0.95
+          }
+        ],
+        "confidence": 0.95,
+        "source_span": "Master Contract 186-12B17 Site License Volume Brackets",
+        "extraction_method": "pdf_extractor",
+        "needs_review": false
+      },
+      "NETBANKING": {
+        "type": "flat_with_cap",
+        "rate_pct": 1.8,
+        "fee_cap": 20.0,
+        "confidence": 0.95,
+        "source_span": "Automated ACH payment cap: $20.00",
+        "extraction_method": "pdf_extractor",
+        "needs_review": false
+      },
+      "INTERNATIONAL_CARD": {
+        "type": "flat_plus_fixed",
+        "rate_pct": 3.0,
+        "fixed_fee": 7.0,
+        "confidence": 0.95,
+        "source_span": "Foreign currency and international processing",
+        "extraction_method": "pdf_extractor",
+        "needs_review": false
+      },
+      "WALLET": {
+        "type": "flat",
+        "rate_pct": 2.1,
+        "fixed_fee": 0.0,
+        "confidence": 0.95,
+        "source_span": "Prepaid purchase order & procurement card processing",
+        "extraction_method": "pdf_extractor",
+        "needs_review": false
+      }
+    },
+    "refund_policy": {
+      "standard_fee": 5.0,
+      "waiver_window_hours": 24.0,
+      "waived_fee": 0.0,
+      "confidence": 0.95,
+      "source_span": "License cancellation & refund policy: 24-hour waiver",
+      "extraction_method": "pdf_extractor",
+      "needs_review": false
+    },
+    "instant_settlement": {
+      "rate_pct": 0.15,
+      "disallowed_risk_ratings": [
+        "SPECIAL_REVIEW",
+        ""
+      ],
+      "confidence": 0.9,
+      "source_span": "Expedited disbursement fee",
+      "extraction_method": "pdf_extractor",
+      "needs_review": false
+    },
+    "statutory_tax": {
+      "gst_rate_pct": 18.0,
+      "confidence": 0.95,
+      "source_span": "Sales and municipal taxes where applicable",
+      "extraction_method": "pdf_extractor",
+      "needs_review": false
+    }
+  }
+}

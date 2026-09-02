@@ -1,0 +1,15 @@
+severity_thresholds:
+  critical:
+    min_amount: 1000.00
+    min_percentage: 5.0
+  moderate:
+    min_amount: 100.00
+    min_percentage: 1.0
+  minor:
+    min_amount: 0.00
+    min_percentage: 0.0
+
+confidence_thresholds:
+  high: 0.95
+  medium: 0.85
+  low: 0.00

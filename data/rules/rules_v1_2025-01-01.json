@@ -1,0 +1,109 @@
+{
+  "contract_id": "RZP-COMM-2025-88492",
+  "merchant_name": "Zenith Retail Technologies Private Limited",
+  "effective_date": "2025-01-01",
+  "version": "1.0",
+  "rules": {
+    "payment_methods": {
+      "UPI": {
+        "type": "flat",
+        "rate_pct": 0.0,
+        "fixed_fee": 0.0,
+        "confidence": 0.99,
+        "source_span": "All standard UPI transactions... charged at 0.00% (Zero MDR) with \u20b90.00 fixed platform fee.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "DOMESTIC_CARD": {
+        "type": "tiered_volume",
+        "tiers": [
+          {
+            "min_volume": 0.0,
+            "max_volume": 500000.0,
+            "rate_pct": 2.0,
+            "tier_name": "Tier 1 (Base)",
+            "confidence": 0.98,
+            "source_span": "Tier 1 (Base Tier): Monthly volume up to \u20b95,00,000 (inclusive) -> 2.00% MDR per transaction.",
+            "needs_review": false
+          },
+          {
+            "min_volume": 500000.01,
+            "max_volume": 2000000.0,
+            "rate_pct": 1.75,
+            "tier_name": "Tier 2 (Growth)",
+            "confidence": 0.98,
+            "source_span": "Tier 2 (Growth Tier): Monthly volume from \u20b95,00,000.01 up to \u20b920,00,000.00 (inclusive) -> 1.75% MDR per transaction.",
+            "needs_review": false
+          },
+          {
+            "min_volume": 2000000.01,
+            "max_volume": null,
+            "rate_pct": 1.5,
+            "tier_name": "Tier 3 (Enterprise)",
+            "confidence": 0.98,
+            "source_span": "Tier 3 (Enterprise Tier): Monthly volume exceeding \u20b920,00,000.00 -> 1.50% MDR per transaction.",
+            "needs_review": false
+          }
+        ],
+        "confidence": 0.98,
+        "source_span": "Domestic card transactions are billed based on cumulative monthly settlement volume processed to date within the current calendar month",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "NETBANKING": {
+        "type": "flat_with_cap",
+        "rate_pct": 1.8,
+        "fee_cap": 20.0,
+        "confidence": 0.97,
+        "source_span": "Standard Netbanking... flat rate of 1.80% MDR per transaction, subject to a maximum fee cap of \u20b920.00 per transaction (excluding GST).",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "INTERNATIONAL_CARD": {
+        "type": "flat_plus_fixed",
+        "rate_pct": 3.0,
+        "fixed_fee": 7.0,
+        "confidence": 0.96,
+        "source_span": "International credit and debit cards issued outside the Republic of India shall be charged at 3.00% MDR plus a flat fixed surcharge of \u20b97.00 per transaction.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "WALLET": {
+        "type": "flat",
+        "rate_pct": 2.1,
+        "fixed_fee": 0.0,
+        "confidence": 0.95,
+        "source_span": "Prepaid wallets (Paytm, Mobikwik, Amazon Pay) and approved BNPL payment rails (Simpl, LazyPay) shall be charged at 2.10% MDR per transaction.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      }
+    },
+    "refund_policy": {
+      "standard_fee": 5.0,
+      "waiver_window_hours": 24.0,
+      "waived_fee": 0.0,
+      "confidence": 0.98,
+      "source_span": "standard processing fee of \u20b95.00 per refund event... initiated within 24 hours... 100% waived (\u20b90.00).",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    },
+    "instant_settlement": {
+      "rate_pct": 0.15,
+      "disallowed_risk_ratings": [
+        "SPECIAL_REVIEW",
+        ""
+      ],
+      "confidence": 0.94,
+      "source_span": "Instant Settlements... additional 0.15% settlement fee... risk_rating is undefined or flagged as tier SPECIAL_REVIEW require manual offline authorization",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    },
+    "statutory_tax": {
+      "gst_rate_pct": 18.0,
+      "confidence": 0.99,
+      "source_span": "All fees (MDR, fixed fees, and refund processing fees) are subject to applicable Goods and Services Tax (GST) at 18.00%",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    }
+  }
+}
