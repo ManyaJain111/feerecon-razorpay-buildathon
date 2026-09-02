@@ -3,9 +3,11 @@
 import os
 import io
 import sys
+import re
 import json
 import time
 import glob
+import threading
 import urllib.parse
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
@@ -18,7 +20,7 @@ from src.loader import load_settlement_csv
 from src.engine import FeeCalculationEngine
 from src.classifier import TransactionClassifier
 from src.report import ReconciliationReporter
-from src.rule_extractor import extract_rules
+from src.rule_extractor import extract_rules, extract_rules_from_text
 from src.audit_store import AuditStore
 from src.dispute_generator import generate_dispute_draft
 from src.pdf_processor import (
@@ -27,6 +29,29 @@ from src.pdf_processor import (
     extract_rules_from_pdf_text,
     parse_statement_from_pdf_text
 )
+
+# ---------------------------------------------------------------------------
+# Runtime NVIDIA NIM API key store (overrides env var; set via /api/set-nim-key)
+# ---------------------------------------------------------------------------
+_nim_key_lock = threading.Lock()
+_runtime_nim_key: Optional[str] = None
+
+def get_nim_api_key() -> Optional[str]:
+    """Return the runtime key (set via UI) or fall back to env var."""
+    with _nim_key_lock:
+        if _runtime_nim_key:
+            return _runtime_nim_key
+    return (
+        os.getenv("NVIDIA_API_KEY")
+        or os.getenv("NVIDIA_NIM_API_KEY")
+        or os.getenv("NV_API_KEY")
+    )
+
+def set_nim_api_key(key: str) -> None:
+    global _runtime_nim_key
+    with _nim_key_lock:
+        _runtime_nim_key = key.strip() if key else None
+
 
 STATIC_DIR = BASE_DIR / "static"
 CONTRACT_PATH = "data/contract.md"
@@ -252,9 +277,20 @@ class ReconcileHTTPHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(content)
 
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "*")
+        self.end_headers()
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
+
+        if path in ["/health", "/api/health"]:
+            self._send_response_json({"status": "ok", "service": "fee-recon-backend"})
+            return
 
         if path in ["/", "/index.html"]:
             index_path = str(STATIC_DIR / "index.html")
@@ -316,6 +352,19 @@ class ReconcileHTTPHandler(BaseHTTPRequestHandler):
             self._send_file(audit_file, "text/csv", "razorpay_fee_leakage_audit.csv")
             return
 
+        if path == "/api/nim-status":
+            key = get_nim_api_key()
+            configured = bool(key)
+            with _nim_key_lock:
+                source = "runtime" if _runtime_nim_key else ("env" if configured else "none")
+            self._send_response_json({
+                "configured": configured,
+                "source": source,
+                "model": "meta/llama-3.1-70b-instruct",
+                "endpoint": "https://integrate.api.nvidia.com/v1/chat/completions"
+            })
+            return
+
         self.send_error(404, "Endpoint not found")
 
     def do_POST(self):
@@ -323,6 +372,23 @@ class ReconcileHTTPHandler(BaseHTTPRequestHandler):
         path = parsed.path
         content_length = int(self.headers.get("Content-Length", 0))
         body_bytes = self.rfile.read(content_length)
+
+        if path == "/api/set-nim-key":
+            try:
+                payload = json.loads(body_bytes.decode("utf-8")) if body_bytes else {}
+                key = str(payload.get("api_key", "")).strip()
+                if not key:
+                    self._send_response_json({"error": "api_key must not be empty"}, 400)
+                    return
+                set_nim_api_key(key)
+                self._send_response_json({
+                    "status": "ok",
+                    "message": "NVIDIA NIM API key set successfully.",
+                    "model": "meta/llama-3.1-70b-instruct"
+                })
+            except Exception as e:
+                self._send_response_json({"error": str(e)}, 400)
+            return
 
         if path == "/api/load-sample":
             try:
@@ -448,149 +514,221 @@ class ReconcileHTTPHandler(BaseHTTPRequestHandler):
 
         self.send_error(404, "Endpoint not found")
 
-def start_server(port: int = 8000):
-    # Try running FastAPI if installed, else fallback to HTTPServer
-    try:
-        import fastapi
-        import uvicorn
-        from fastapi import FastAPI, UploadFile, File, HTTPException
-        from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
-        from fastapi.staticfiles import StaticFiles
+def create_app():
+    from fastapi import FastAPI, UploadFile, File, HTTPException
+    from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.middleware.cors import CORSMiddleware
 
-        app = FastAPI(title="Razorpay Fee Leakage Detector")
+    app = FastAPI(title="Payment Fee Reconciliation & Audit API")
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    if STATIC_DIR.exists():
         app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-        @app.get("/", response_class=HTMLResponse)
-        def index():
-            with open(STATIC_DIR / "index.html", "r", encoding="utf-8") as f:
+    @app.get("/health")
+    @app.get("/api/health")
+    def health_check():
+        return {"status": "ok", "service": "fee-recon-backend"}
+
+    @app.get("/", response_class=HTMLResponse)
+    def index():
+        index_file = STATIC_DIR / "index.html"
+        if index_file.exists():
+            with open(index_file, "r", encoding="utf-8") as f:
                 return f.read()
+        return "<html><body><h1>Payment Fee Reconciliation API</h1><p>API is running. Access <a href='/docs'>/docs</a> for Swagger UI.</p></body></html>"
 
-        @app.get("/api/reconciliation")
-        def get_reconciliation():
-            return run_reconciliation(SETTLEMENT_PATH)
+    @app.get("/api/reconciliation")
+    def get_reconciliation():
+        return run_reconciliation(SETTLEMENT_PATH)
 
-        @app.get("/api/sample-pdfs")
-        def get_samples():
-            return {"samples": SAMPLE_PDF_CATALOG}
+    @app.get("/api/sample-pdfs")
+    def get_samples():
+        return {"samples": SAMPLE_PDF_CATALOG}
 
-        @app.get("/api/download-statement/{sample_id}")
-        def download_statement(sample_id: str):
-            found = next((s for s in SAMPLE_PDF_CATALOG if s["id"] == sample_id or s["filename"] == sample_id), None)
-            if found and os.path.exists(found["statement_file"]):
-                return FileResponse(found["statement_file"], media_type="text/csv", filename=f"account_statement_sample_{sample_id}.csv")
-            raise HTTPException(status_code=404, detail="Statement not found")
+    @app.get("/api/download-statement/{sample_id}")
+    def download_statement(sample_id: str):
+        found = next((s for s in SAMPLE_PDF_CATALOG if s["id"] == sample_id or s["filename"] == sample_id), None)
+        if found and os.path.exists(found["statement_file"]):
+            return FileResponse(found["statement_file"], media_type="text/csv", filename=f"account_statement_sample_{sample_id}.csv")
+        raise HTTPException(status_code=404, detail="Statement not found")
 
-        @app.post("/api/load-sample")
-        def load_sample(payload: Dict[str, Any]):
-            sample_id = str(payload.get("sample_id", "1"))
-            sample = next((s for s in SAMPLE_PDF_CATALOG if s["id"] == sample_id or s["filename"] == sample_id), None)
-            if not sample:
-                raise HTTPException(status_code=404, detail="Sample not found")
-            rules_data = None
-            if os.path.exists(sample["rules_file"]):
-                with open(sample["rules_file"], "r", encoding="utf-8") as f:
-                    rules_data = json.load(f)
-            recon = run_reconciliation(sample["statement_file"], rules_override=rules_data, batch_id=f"SAMPLE_{sample_id}")
-            recon["sample_info"] = sample
-            return recon
+    @app.post("/api/load-sample")
+    def load_sample(payload: Dict[str, Any]):
+        sample_id = str(payload.get("sample_id", "1"))
+        sample = next((s for s in SAMPLE_PDF_CATALOG if s["id"] == sample_id or s["filename"] == sample_id), None)
+        if not sample:
+            raise HTTPException(status_code=404, detail="Sample not found")
+        rules_data = None
+        if os.path.exists(sample["rules_file"]):
+            with open(sample["rules_file"], "r", encoding="utf-8") as f:
+                rules_data = json.load(f)
+        recon = run_reconciliation(sample["statement_file"], rules_override=rules_data, batch_id=f"SAMPLE_{sample_id}")
+        recon["sample_info"] = sample
+        return recon
 
-        @app.post("/api/upload-settlement")
-        async def upload_settlement(file: UploadFile = File(...)):
-            contents = await file.read()
-            temp_path = f"reports/temp_{file.filename}"
-            with open(temp_path, "wb") as f:
-                f.write(contents)
-            return run_reconciliation(temp_path, batch_id=f"UPLOAD_{file.filename}")
+    @app.post("/api/upload-settlement")
+    async def upload_settlement(file: UploadFile = File(...)):
+        contents = await file.read()
+        os.makedirs("reports", exist_ok=True)
+        temp_path = f"reports/temp_{file.filename}"
+        with open(temp_path, "wb") as f:
+            f.write(contents)
+        return run_reconciliation(temp_path, batch_id=f"UPLOAD_{file.filename}")
 
-        @app.post("/api/process-pdf")
-        async def process_pdf_api(file: UploadFile = File(...)):
-            contents = await file.read()
-            temp_path = f"reports/temp_{file.filename}"
-            with open(temp_path, "wb") as f:
-                f.write(contents)
-            pdf_text = extract_text_from_pdf(temp_path)
-            doc_type = detect_pdf_document_type(pdf_text, file.filename)
-            if doc_type == "contract":
+    @app.post("/api/process-pdf")
+    async def process_pdf_api(file: UploadFile = File(...)):
+        contents = await file.read()
+        os.makedirs("reports", exist_ok=True)
+        temp_path = f"reports/temp_{file.filename}"
+        with open(temp_path, "wb") as f:
+            f.write(contents)
+        pdf_text = extract_text_from_pdf(temp_path)
+        doc_type = detect_pdf_document_type(pdf_text, file.filename)
+        nim_key = get_nim_api_key()
+        if doc_type == "contract":
+            # Use LLM (NVIDIA NIM) for generic contracts if key available;
+            # pre-bundled extractors are used as fallback via extract_rules_from_pdf_text.
+            if nim_key:
+                try:
+                    rules_extracted = extract_rules_from_text(pdf_text, api_key=nim_key)
+                except Exception:
+                    rules_extracted = extract_rules_from_pdf_text(pdf_text, file.filename, api_key=nim_key)
+            else:
                 rules_extracted = extract_rules_from_pdf_text(pdf_text, file.filename)
-                recon = run_reconciliation(SETTLEMENT_PATH, rules_override=rules_extracted, batch_id=f"PDF_CONTRACT_{file.filename}")
-                recon["doc_type"] = "contract"
-                recon["extracted_text_preview"] = pdf_text[:1500]
-                recon["filename"] = file.filename
-                return recon
-            else:
-                records = parse_statement_from_pdf_text(pdf_text, file.filename) or load_settlement_csv(temp_path)
-                recon = run_reconciliation(records, batch_id=f"PDF_STATEMENT_{file.filename}")
-                recon["doc_type"] = "statement"
-                recon["extracted_text_preview"] = pdf_text[:1500]
-                recon["filename"] = file.filename
-                return recon
-
-        @app.get("/api/contract")
-        def get_contract_data():
-            with open(CONTRACT_PATH, "r", encoding="utf-8") as f:
-                contract_raw = f.read()
-            _, rules_json = get_engine_and_rules()
-            return {"contract_raw": contract_raw, "rules_json": rules_json}
-
-        @app.get("/api/dispute-draft")
-        def get_dispute():
-            draft_files = glob.glob("reports/dispute_draft_*.md")
-            if draft_files:
-                draft_files.sort(key=os.path.getmtime, reverse=True)
-                with open(draft_files[0], "r", encoding="utf-8") as f:
-                    return {"file": draft_files[0], "content": f.read()}
-            return {"file": "reports/dispute_draft_LATEST.md", "content": ""}
-
-        @app.get("/api/export-audit")
-        def export_audit():
-            return FileResponse("reports/audit_trail.csv", media_type="text/csv", filename="razorpay_fee_leakage_audit.csv")
-
-        @app.post("/api/apply-nlp-policy")
-        async def apply_nlp_policy(payload: Dict[str, Any]):
-            prompt = str(payload.get("prompt", "")).strip()
-            sample_id = str(payload.get("sample_id", "1"))
-            
-            if not prompt:
-                raise HTTPException(status_code=400, detail="Prompt cannot be empty")
-
-            sample = next((s for s in SAMPLE_PDF_CATALOG if s["id"] == sample_id or s["filename"] == sample_id), None)
-            if not sample:
-                raise HTTPException(status_code=404, detail="Sample not found")
-
-            # Load current rules
-            rules_data = None
-            if os.path.exists(sample["rules_file"]):
-                with open(sample["rules_file"], "r", encoding="utf-8") as f:
-                    rules_data = json.load(f)
-            else:
-                engine, rules_data = get_engine_and_rules()
-
-            # Parse natural language prompt and apply policy changes
-            amended_rules, applied_changes = apply_policy_prompt(rules_data, prompt)
-
-            # Run reconciliation with amended rules
-            recon = run_reconciliation(sample["statement_file"], rules_override=amended_rules, batch_id=f"POLICY_{sample_id}")
-            recon["sample_info"] = sample
-            
-            # Add policy metadata
-            recon["policy_metadata"] = {
-                "original_prompt": prompt,
-                "applied_changes": applied_changes
-            }
-            
+            recon = run_reconciliation(SETTLEMENT_PATH, rules_override=rules_extracted, batch_id=f"PDF_CONTRACT_{file.filename}")
+            recon["doc_type"] = "contract"
+            recon["extracted_text_preview"] = pdf_text[:1500]
+            recon["filename"] = file.filename
+            recon["llm_provider"] = f"nvidia_nim" if nim_key else "offline_parser"
+            return recon
+        else:
+            records = parse_statement_from_pdf_text(pdf_text, file.filename) or load_settlement_csv(temp_path)
+            recon = run_reconciliation(records, batch_id=f"PDF_STATEMENT_{file.filename}")
+            recon["doc_type"] = "statement"
+            recon["extracted_text_preview"] = pdf_text[:1500]
+            recon["filename"] = file.filename
             return recon
 
-        print(f"Starting FastAPI web server at http://localhost:{port} ...")
-        uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
-    except Exception as e:
-        print(f"Notice: FastAPI not active ({e}), running high-performance built-in HTTP server.")
-        HTTPServer.allow_reuse_address = True
-        server = HTTPServer(("0.0.0.0", port), ReconcileHTTPHandler)
-        print(f"Razorpay Fee Leakage Detector running at http://localhost:{port} ...")
+    @app.get("/api/contract")
+    def get_contract_data():
+        with open(CONTRACT_PATH, "r", encoding="utf-8") as f:
+            contract_raw = f.read()
+        _, rules_json = get_engine_and_rules()
+        return {"contract_raw": contract_raw, "rules_json": rules_json}
+
+    @app.get("/api/dispute-draft")
+    def get_dispute():
+        draft_files = glob.glob("reports/dispute_draft_*.md")
+        if draft_files:
+            draft_files.sort(key=os.path.getmtime, reverse=True)
+            with open(draft_files[0], "r", encoding="utf-8") as f:
+                return {"file": draft_files[0], "content": f.read()}
+        return {"file": "reports/dispute_draft_LATEST.md", "content": ""}
+
+    @app.get("/api/export-audit")
+    def export_audit():
+        if os.path.exists("reports/audit_trail.csv"):
+            return FileResponse("reports/audit_trail.csv", media_type="text/csv", filename="razorpay_fee_leakage_audit.csv")
+        raise HTTPException(status_code=404, detail="Audit trail CSV not generated yet")
+
+    @app.post("/api/apply-nlp-policy")
+    async def apply_nlp_policy(payload: Dict[str, Any]):
+        prompt = str(payload.get("prompt", "")).strip()
+        sample_id = str(payload.get("sample_id", "1"))
+        
+        if not prompt:
+            raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+
+        sample = next((s for s in SAMPLE_PDF_CATALOG if s["id"] == sample_id or s["filename"] == sample_id), None)
+        if not sample:
+            raise HTTPException(status_code=404, detail="Sample not found")
+
+        rules_data = None
+        if os.path.exists(sample["rules_file"]):
+            with open(sample["rules_file"], "r", encoding="utf-8") as f:
+                rules_data = json.load(f)
+        else:
+            engine, rules_data = get_engine_and_rules()
+
+        amended_rules, applied_changes = apply_policy_prompt(rules_data, prompt)
+        recon = run_reconciliation(sample["statement_file"], rules_override=amended_rules, batch_id=f"POLICY_{sample_id}")
+        recon["sample_info"] = sample
+        recon["policy_metadata"] = {
+            "original_prompt": prompt,
+            "applied_changes": applied_changes
+        }
+        return recon
+
+    # -----------------------------------------------------------------------
+    # NVIDIA NIM API Key Management
+    # -----------------------------------------------------------------------
+    @app.post("/api/set-nim-key")
+    async def set_nim_key_endpoint(payload: Dict[str, Any]):
+        """
+        Set the NVIDIA NIM API key at runtime. The key is stored in-process
+        (per worker) and used for all subsequent PDF contract extractions.
+        The key is never persisted to disk.
+        """
+        key = str(payload.get("api_key", "")).strip()
+        if not key:
+            raise HTTPException(status_code=400, detail="api_key must not be empty")
+        set_nim_api_key(key)
+        return {
+            "status": "ok",
+            "message": "NVIDIA NIM API key set successfully.",
+            "model": "meta/llama-3.1-70b-instruct"
+        }
+
+    @app.get("/api/nim-status")
+    async def nim_status():
+        """Returns whether a NVIDIA NIM API key is currently configured."""
+        key = get_nim_api_key()
+        configured = bool(key)
+        source = "none"
+        if configured:
+            with _nim_key_lock:
+                source = "runtime" if _runtime_nim_key else "env"
+        return {
+            "configured": configured,
+            "source": source,
+            "model": "meta/llama-3.1-70b-instruct",
+            "endpoint": "https://integrate.api.nvidia.com/v1/chat/completions"
+        }
+
+    return app
+
+
+try:
+    app = create_app()
+except Exception:
+    app = None
+
+def start_server(port: int = 8000):
+    if app is not None:
         try:
-            server.serve_forever()
-        except KeyboardInterrupt:
-            server.server_close()
+            import uvicorn
+            print(f"Starting FastAPI web server at http://localhost:{port} ...")
+            uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
+            return
+        except Exception as e:
+            print(f"Notice: Uvicorn run failed ({e}), falling back to built-in HTTP server.")
+    
+    HTTPServer.allow_reuse_address = True
+    server = HTTPServer(("0.0.0.0", port), ReconcileHTTPHandler)
+    print(f"Fee Reconciliation Server running at http://localhost:{port} ...")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        server.server_close()
 
 if __name__ == "__main__":
     start_server(8000)

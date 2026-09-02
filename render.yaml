@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: feerecon-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: NVIDIA_API_KEY
+        sync: false   # Set this in Render dashboard → Environment → Secret
+      - key: NVIDIA_NIM_MODEL
+        value: meta/llama-3.1-70b-instruct

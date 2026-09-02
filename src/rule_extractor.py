@@ -366,36 +366,153 @@ def perform_round_trip_validation(rules_dict: Dict[str, Any], contract_text: str
 
     return summary, discrepancies
 
-def extract_rules(contract_path: str, output_path: Optional[str] = "src/rules.json") -> Dict[str, Any]:
+def extract_rules_with_nvidia_nim(
+    contract_text: str,
+    api_key: Optional[str] = None,
+    model: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
     """
-    Reads contract file, executes LLM extraction (or offline parser if API key is not configured),
-    validates schema, enforces confidence scores and needs_review flags,
-    performs semantic round-trip validation, and saves to output_path.
+    Extracts structured fee rules using NVIDIA NIM API.
+    Primary model: meta/llama-3.1-70b-instruct (excellent structured JSON via NIM).
+    Endpoint: https://integrate.api.nvidia.com/v1/chat/completions
+
+    api_key can be provided at runtime (e.g. from the web UI) and takes precedence
+    over all environment variables.
+    """
+    key = (
+        api_key
+        or os.getenv("NVIDIA_API_KEY")
+        or os.getenv("NVIDIA_NIM_API_KEY")
+        or os.getenv("NV_API_KEY")
+    )
+    if not key:
+        return None
+
+    selected_model = (
+        model
+        or os.getenv("NVIDIA_NIM_MODEL")
+        or os.getenv("NVIDIA_MODEL")
+        or "meta/llama-3.1-70b-instruct"   # Best NIM model for structured JSON extraction
+    )
+    endpoint = os.getenv("NVIDIA_NIM_ENDPOINT", "https://integrate.api.nvidia.com/v1/chat/completions")
+
+    payload = {
+        "model": selected_model,
+        "messages": [
+            {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
+            {"role": "user", "content": f"Extract structured fee rules from this merchant contract:\n\n{contract_text}"}
+        ],
+        "temperature": 0.1,
+        "max_tokens": 3000,
+        "response_format": {"type": "json_object"}
+    }
+
+    try:
+        import httpx
+        headers = {
+            "Authorization": f"Bearer {key.strip()}",
+            "Content-Type": "application/json"
+        }
+        with httpx.Client(timeout=60.0) as client:
+            resp = client.post(endpoint, headers=headers, json=payload)
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data["choices"][0]["message"]["content"]
+                m = re.search(r"\{[\s\S]*\}", content)
+                if m:
+                    extracted = json.loads(m.group(0))
+                    _stamp_extraction_method(extracted, f"nvidia_nim:{selected_model}")
+                    return extracted
+            else:
+                print(f"[NVIDIA NIM] Request returned status {resp.status_code}: {resp.text[:200]}")
+    except Exception as e:
+        try:
+            import urllib.request
+            req_data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                endpoint,
+                data=req_data,
+                headers={
+                    "Authorization": f"Bearer {key.strip()}",
+                    "Content-Type": "application/json"
+                },
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=60.0) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode("utf-8"))
+                    content = data["choices"][0]["message"]["content"]
+                    m = re.search(r"\{[\s\S]*\}", content)
+                    if m:
+                        extracted = json.loads(m.group(0))
+                        _stamp_extraction_method(extracted, f"nvidia_nim:{selected_model}")
+                        return extracted
+        except Exception as e2:
+            print(f"[NVIDIA NIM] Extraction failed: {e2}")
+
+    return None
+
+def _stamp_extraction_method(node: Any, method_name: str) -> None:
+    if isinstance(node, dict):
+        if "confidence" in node and "extraction_method" not in node:
+            node["extraction_method"] = method_name
+        for v in node.values():
+            _stamp_extraction_method(v, method_name)
+    elif isinstance(node, list):
+        for item in node:
+            _stamp_extraction_method(item, method_name)
+
+def extract_rules(contract_path: str, output_path: Optional[str] = "src/rules.json", api_key: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Reads contract file, executes LLM extraction (NVIDIA NIM primary; offline parser fallback
+    if no API key is configured), validates schema, enforces confidence scores and needs_review
+    flags, performs semantic round-trip validation, and saves to output_path.
     """
     with open(contract_path, "r", encoding="utf-8") as f:
         contract_text = f.read()
+    return extract_rules_from_text(contract_text, output_path=output_path, api_key=api_key)
 
+
+def extract_rules_from_text(contract_text: str, output_path: Optional[str] = None, api_key: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Runs rule extraction on raw contract text (used by the web API when processing PDFs).
+    Provider priority:
+      1. NVIDIA NIM (primary) — requires NVIDIA_API_KEY env var or api_key argument
+      2. Anthropic Claude (secondary) — requires ANTHROPIC_API_KEY env var
+      3. Deterministic offline parser (fallback, always available)
+    """
+    nim_key = api_key or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_NIM_API_KEY") or os.getenv("NV_API_KEY")
     extracted = None
 
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
-    openai_key = os.getenv("OPENAI_API_KEY")
-
-    if anthropic_key:
-        try:
-            import anthropic
-            client = anthropic.Anthropic(api_key=anthropic_key)
-            resp = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=2048,
-                system=EXTRACTION_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": f"Extract fee rules from contract:\n\n{contract_text}"}]
-            )
-            raw_text = resp.content[0].text
-            extracted = json.loads(re.search(r"\{.*\}", raw_text, re.DOTALL).group(0))
-        except Exception as e:
-            print(f"[RuleExtractor] LLM API call failed ({e}), falling back to deterministic extraction.")
+    if nim_key:
+        print(f"[RuleExtractor] Using NVIDIA NIM API (model: meta/llama-3.1-70b-instruct)")
+        extracted = extract_rules_with_nvidia_nim(contract_text, api_key=nim_key)
+        if not extracted:
+            print("[RuleExtractor] NVIDIA NIM returned no valid result, trying next provider.")
+    else:
+        print("[RuleExtractor] No NVIDIA_API_KEY set — skipping NIM.")
 
     if not extracted:
+        anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+        if anthropic_key:
+            print("[RuleExtractor] Trying Anthropic Claude fallback...")
+            try:
+                import anthropic
+                client = anthropic.Anthropic(api_key=anthropic_key)
+                resp = client.messages.create(
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=2048,
+                    system=EXTRACTION_SYSTEM_PROMPT,
+                    messages=[{"role": "user", "content": f"Extract fee rules from contract:\n\n{contract_text}"}]
+                )
+                raw_text = resp.content[0].text
+                extracted = json.loads(re.search(r"\{.*\}", raw_text, re.DOTALL).group(0))
+                print("[RuleExtractor] Anthropic extraction succeeded.")
+            except Exception as e:
+                print(f"[RuleExtractor] Anthropic call failed ({e}), using offline parser.")
+
+    if not extracted:
+        print("[RuleExtractor] Using deterministic offline parser (no API key available).")
         extracted = extract_rules_from_contract_text_fallback(contract_text)
 
     extracted = apply_needs_review_flags(extracted, threshold=CONFIDENCE_THRESHOLD)
@@ -412,7 +529,9 @@ def extract_rules(contract_path: str, output_path: Optional[str] = "src/rules.js
 
     return extracted
 
+
 if __name__ == "__main__":
     rules = extract_rules("data/contract.md", "src/rules.json")
     print("Extracted rules saved successfully to src/rules.json")
     print(json.dumps(rules, indent=2))
+

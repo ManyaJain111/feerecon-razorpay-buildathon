@@ -80,7 +80,7 @@ def detect_pdf_document_type(text: str, filename: str = "") -> str:
         return "statement"
     return "contract"
 
-def extract_rules_from_pdf_text(text: str, pdf_filename: str = "") -> Dict[str, Any]:
+def extract_rules_from_pdf_text(text: str, pdf_filename: str = "", api_key: Optional[str] = None) -> Dict[str, Any]:
     """
     Parses unstructured text from a contract/fee schedule PDF into structured rules JSON.
     """
@@ -444,8 +444,16 @@ def extract_rules_from_pdf_text(text: str, pdf_filename: str = "") -> Dict[str, 
         }
         return rules
 
-    # Default / Generic fallback
-    from src.rule_extractor import extract_rules_from_contract_text_fallback
+    # Default / Generic fallback (NVIDIA NIM with offline fallback)
+    from src.rule_extractor import (
+        extract_rules_with_nvidia_nim,
+        extract_rules_from_contract_text_fallback,
+        apply_needs_review_flags,
+        validate_rules_schema
+    )
+    llm_rules = extract_rules_with_nvidia_nim(text, api_key=api_key)
+    if llm_rules and validate_rules_schema(llm_rules):
+        return apply_needs_review_flags(llm_rules)
     return extract_rules_from_contract_text_fallback(text)
 
 def parse_statement_from_pdf_text(text: str, pdf_filename: str = "") -> List[Dict[str, Any]]:

@@ -593,9 +593,6 @@
       <button class="btn" style="font-size:12px; padding:6px 10px;" onclick="promptApiUrl()">
         Backend: <span id="api-status-badge" style="color:var(--success); font-weight:600;">Connected</span>
       </button>
-      <button class="btn" id="nim-key-btn" style="font-size:12px; padding:6px 10px;" onclick="promptNimKey()" title="Set NVIDIA NIM API Key for LLM contract extraction">
-        🤖 NIM: <span id="nim-status-badge" style="color:var(--text-muted); font-weight:600;">Checking…</span>
-      </button>
       <button class="btn btn-dispute" onclick="openDisputeModal()">
         Create Dispute Claim
       </button>
@@ -759,62 +756,6 @@
       if (headerBtn) headerBtn.href = apiUrl('/api/export-audit');
       const disputeBtn = document.getElementById('dispute-export-btn');
       if (disputeBtn) disputeBtn.href = apiUrl('/api/export-audit');
-    }
-
-    async function checkNimStatus() {
-      const badge = document.getElementById('nim-status-badge');
-      if (!badge) return;
-      try {
-        const res = await fetch(apiUrl('/api/nim-status'));
-        if (res.ok) {
-          const data = await res.json();
-          if (data.configured) {
-            badge.textContent = data.source === 'runtime' ? 'Key Set ✓' : 'Env Key ✓';
-            badge.style.color = 'var(--success)';
-          } else {
-            badge.textContent = 'No Key';
-            badge.style.color = 'var(--warning)';
-          }
-        } else {
-          badge.textContent = 'Error';
-          badge.style.color = 'var(--danger)';
-        }
-      } catch (e) {
-        badge.textContent = 'Offline';
-        badge.style.color = 'var(--danger)';
-      }
-    }
-
-    async function promptNimKey() {
-      const badge = document.getElementById('nim-status-badge');
-      const entered = prompt(
-        'Enter your NVIDIA NIM API Key (nvapi-...).\n' +
-        'Used for LLM-powered contract extraction (meta/llama-3.1-70b-instruct).\n' +
-        'The key is stored in-memory only and never written to disk.',
-        ''
-      );
-      if (entered === null) return; // User cancelled
-      const key = entered.trim();
-      if (!key) {
-        alert('No key entered. NIM extraction will use offline parser as fallback.');
-        return;
-      }
-      try {
-        const res = await fetch(apiUrl('/api/set-nim-key'), {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({api_key: key})
-        });
-        const data = await res.json();
-        if (res.ok && data.status === 'ok') {
-          if (badge) { badge.textContent = 'Key Set ✓'; badge.style.color = 'var(--success)'; }
-          alert('NVIDIA NIM API key configured ✓\nModel: ' + data.model + '\nYour next PDF upload will use LLM extraction.');
-        } else {
-          alert('Failed to set key: ' + (data.detail || data.error || JSON.stringify(data)));
-        }
-      } catch (e) {
-        alert('Error setting NIM key: ' + e.message);
-      }
     }
 
     async function checkBackendHealth() {
@@ -1125,10 +1066,8 @@
     // Initialize
     updateExportLinks();
     checkBackendHealth();
-    checkNimStatus();
     loadCatalog();
     loadSample('1');
-
   </script>
 </body>
 </html>

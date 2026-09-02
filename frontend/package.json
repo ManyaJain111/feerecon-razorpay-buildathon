@@ -1,0 +1,10 @@
+{
+  "name": "fee-recon-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Payment Gateway Fee Reconciliation & Dispute Dashboard",
+  "scripts": {
+    "build": "echo 'Frontend ready'",
+    "start": "npx serve ."
+  }
+}
