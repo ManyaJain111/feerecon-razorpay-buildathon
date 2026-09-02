@@ -7,7 +7,7 @@ on:
   workflow_dispatch:        # allow manual trigger from GitHub UI
 
 env:
-  AZURE_WEBAPP_NAME: razorpay-fee-detector   # ← change to your App Service name
+  AZURE_WEBAPP_NAME: razorpay-api-manya   # Azure App Service name
   PYTHON_VERSION: "3.11"
 
 jobs:
@@ -47,21 +47,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-
-      - name: Install dependencies into target folder
-        run: |
-          pip install --target=".python_packages/lib/site-packages" -r requirements.txt
-
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # Ensure Azure uses Oryx to build (pip install -r requirements.txt)
+      # and startup.sh as the startup command on every deploy.
+      - name: Configure App Service startup & build settings
+        run: |
+          az webapp config set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --startup-file "startup.sh"
+
+          az webapp config appsettings set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
+
+      # Zip-deploy source code; Oryx on Azure will run pip install automatically
       - name: Deploy to Azure Web App
         id: deploy
         uses: azure/webapps-deploy@v3
