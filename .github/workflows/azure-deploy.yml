@@ -8,7 +8,7 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: razorpay-api-manya   # Azure App Service name
-  PYTHON_VERSION: "3.11"
+  PYTHON_VERSION: "3.12"
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────────
@@ -40,15 +40,11 @@ jobs:
     name: Deploy to Azure App Service
     runs-on: ubuntu-latest
     needs: test
-    environment:
-      name: production
-      url: ${{ steps.deploy.outputs.webapp-url }}
-
-    # Required for OIDC federated token request
+  
     permissions:
-      id-token: write   # request OIDC JWT from GitHub
-      contents: read    # checkout the repo
-
+      id-token: write
+      contents: read
+  
     steps:
       - uses: actions/checkout@v4
 
