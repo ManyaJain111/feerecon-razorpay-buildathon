@@ -29,7 +29,18 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     except Exception:
         pass
 
-    # Method 2: pikepdf extraction fallback
+    # Method 2: pypdf (pure Python fallback, no OS dependencies)
+    try:
+        from pypdf import PdfReader
+        reader = PdfReader(pdf_path)
+        pages_text = [page.extract_text() or "" for page in reader.pages]
+        extracted = "\n".join(pages_text).strip()
+        if extracted:
+            return extracted
+    except Exception:
+        pass
+
+    # Method 3: pikepdf extraction fallback
     try:
         import pikepdf
         text_parts = []
