@@ -206,22 +206,41 @@ az webapp config appsettings set \
 
 > **Note:** Without API keys the app uses the deterministic offline parser — fully functional with no LLM costs.
 
-### Step 3 — Create the GitHub Actions Service Principal
+### Step 3 — Configure OIDC Federated Credentials for GitHub Actions
+
+The workflow uses **OpenID Connect (OIDC)** — no long-lived secret JSON required.
 
 ```bash
+# 1. Create the service principal (no --sdk-auth flag)
 az ad sp create-for-rbac \
   --name "sp-feerecon-github" \
   --role contributor \
-  --scopes /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/$RESOURCE_GROUP \
-  --sdk-auth
+  --scopes /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/$RESOURCE_GROUP
+
+# Note the output — you need appId (client ID) and tenant
 ```
 
-Copy the full JSON output. In your GitHub repo go to:
+```bash
+# 2. Add a federated credential trusting your GitHub repo's main branch
+az ad app federated-credential create \
+  --id <appId-from-above> \
+  --parameters '{
+    "name": "github-main",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:<YOUR_GITHUB_ORG>/<YOUR_REPO>:ref:refs/heads/main",
+    "audiences": ["api://AzureADTokenExchange"]
+  }'
+```
+
+In your GitHub repo go to:
 **Settings → Secrets and variables → Actions → New repository secret**
 
 | Secret name | Value |
 |---|---|
-| `AZURE_CREDENTIALS` | *(paste the full JSON from the command above)* |
+| `AZURE_CLIENT_ID` | `appId` from the `az ad sp create-for-rbac` output |
+| `AZURE_TENANT_ID` | `tenant` from the same output |
+| `AZURE_SUBSCRIPTION_ID` | Your Azure subscription ID |
+| `AZURE_RESOURCE_GROUP` | Resource group containing `razorpay-api-manya` |
 
 ### Step 4 — Trigger Deployment
 
@@ -229,8 +248,9 @@ Push to `main` (or go to **Actions → Deploy to Azure App Service → Run workf
 
 The pipeline will:
 1. Run `pytest` — aborts deployment if any test fails
-2. Install dependencies into `.python_packages/`
-3. Zip-deploy the app to Azure App Service
+2. Login to Azure via OIDC (no stored credentials)
+3. Set `startup.sh` as the App Service startup command
+4. Zip-deploy source; Oryx installs `requirements.txt` server-side
 
 ### Step 5 — Verify
 

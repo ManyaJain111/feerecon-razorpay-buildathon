@@ -44,16 +44,26 @@ jobs:
       name: production
       url: ${{ steps.deploy.outputs.webapp-url }}
 
+    # Required for OIDC federated token request
+    permissions:
+      id-token: write   # request OIDC JWT from GitHub
+      contents: read    # checkout the repo
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Azure Login
+      # OIDC login — no long-lived secret JSON needed.
+      # Requires a federated credential on the service principal
+      # configured to trust this repo + branch.
+      - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # Ensure Azure uses Oryx to build (pip install -r requirements.txt)
-      # and startup.sh as the startup command on every deploy.
+      # Pin startup command and enable Oryx build on every deploy
+      # so Azure always runs `pip install -r requirements.txt` server-side.
       - name: Configure App Service startup & build settings
         run: |
           az webapp config set \
@@ -66,7 +76,8 @@ jobs:
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
 
-      # Zip-deploy source code; Oryx on Azure will run pip install automatically
+      # Zip-deploy source; Oryx installs requirements.txt server-side.
+      # No Docker, no ACR, no publish-profile.
       - name: Deploy to Azure Web App
         id: deploy
         uses: azure/webapps-deploy@v3
