@@ -115,7 +115,7 @@ class ReconciliationReporter:
             "txn_id", "status", "payment_method", "amount",
             "billed_fee", "billed_gst", "billed_total",
             "expected_fee", "expected_gst", "expected_total",
-            "delta", "severity", "confidence", "leak_type", "reason", "formula_audit"
+            "delta", "severity", "match_confidence", "leak_type", "reason", "formula_audit"
         ]
         with open(output_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -134,7 +134,7 @@ class ReconciliationReporter:
                     "expected_total": f"{r['expected_total']:.2f}" if r.get("expected_total") is not None else "",
                     "delta": f"{r['delta']:.2f}" if r.get("delta") is not None else "",
                     "severity": r.get("severity", "NONE"),
-                    "confidence": r.get("confidence", "HIGH"),
+                    "match_confidence": r.get("match_confidence", r.get("confidence", "HIGH")),
                     "leak_type": r["leak_type"],
                     "reason": r["reason"],
                     "formula_audit": r["formula_audit"]

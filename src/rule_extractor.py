@@ -6,6 +6,7 @@ import re
 from typing import Dict, Any, Optional, List, Tuple
 
 CONFIDENCE_THRESHOLD = 0.85
+UNVERIFIED_CONFIDENCE_THRESHOLD = 0.80
 
 EXTRACTION_SYSTEM_PROMPT = """
 You are an expert financial contracts analyst. Your job is to extract payment gateway fee schedules,
@@ -103,6 +104,7 @@ def apply_needs_review_flags(rules_dict: Dict[str, Any], threshold: float = CONF
     """
     Recursively inspects all dictionary nodes with a 'confidence' field.
     Sets 'needs_review': True if confidence < threshold, else False.
+    Sets 'status': 'unverified' if confidence < UNVERIFIED_CONFIDENCE_THRESHOLD.
     """
     def check_node(node: Any):
         if isinstance(node, dict):
@@ -110,6 +112,8 @@ def apply_needs_review_flags(rules_dict: Dict[str, Any], threshold: float = CONF
                 conf = float(node.get("confidence", 1.0))
                 if "needs_review" not in node:
                     node["needs_review"] = bool(conf < threshold)
+                if "status" not in node:
+                    node["status"] = "unverified" if conf < UNVERIFIED_CONFIDENCE_THRESHOLD else "verified"
             for k, v in node.items():
                 check_node(v)
         elif isinstance(node, list):

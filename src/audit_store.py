@@ -1,13 +1,21 @@
-"""SQLite audit trail and dispute repository with idempotency tracking."""
+"""SQLite audit trail and dispute repository with idempotency tracking.
+
+Single-writer by design: all writes funneled through one writer thread/queue.
+Uses WAL mode for better concurrent read performance.
+"""
 
 import sqlite3
 import hashlib
 import json
 import os
+import threading
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 
 DEFAULT_DB_PATH = "reports/audit_store.db"
+
+# Single-writer lock for serializing all audit store writes
+_write_lock = threading.Lock()
 
 class AuditStore:
     def __init__(self, db_path: str = DEFAULT_DB_PATH):
@@ -18,6 +26,8 @@ class AuditStore:
     def _get_connection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
+        # Enable WAL mode for better concurrent read performance (single-writer by design)
+        conn.execute("PRAGMA journal_mode=WAL;")
         return conn
 
     def _init_db(self):
@@ -39,19 +49,36 @@ class AuditStore:
                     leak_type TEXT,
                     severity TEXT,
                     confidence TEXT,
+                    match_confidence TEXT,
                     dispute_status TEXT DEFAULT 'none',
                     resolution_amount REAL DEFAULT 0.0,
+                    outcome TEXT DEFAULT 'pending',
                     idempotency_key TEXT UNIQUE,
                     reason TEXT,
                     timestamp TEXT,
                     raw_json TEXT
                 )
             """)
+            
+            # Migration: add outcome column if it doesn't exist (for existing databases)
+            try:
+                cursor.execute("ALTER TABLE audit_trail ADD COLUMN outcome TEXT DEFAULT 'pending'")
+            except sqlite3.OperationalError:
+                # Column already exists
+                pass
+            
+            # Migration: add match_confidence column if it doesn't exist
+            try:
+                cursor.execute("ALTER TABLE audit_trail ADD COLUMN match_confidence TEXT DEFAULT 'HIGH'")
+            except sqlite3.OperationalError:
+                pass
+            
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_batch_id ON audit_trail(batch_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_leak_type ON audit_trail(leak_type)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_status ON audit_trail(status)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_dispute_status ON audit_trail(dispute_status)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_idempotency ON audit_trail(idempotency_key)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_outcome ON audit_trail(outcome)")
             conn.commit()
 
     @staticmethod
@@ -64,80 +91,102 @@ class AuditStore:
         """
         Persists classified records to SQLite.
         Uses INSERT OR REPLACE with idempotency key to prevent double counting.
+        Single-writer by design: all writes serialized through a lock.
         Returns the number of rows inserted/updated.
         """
         now_ts = datetime.now(timezone.utc).isoformat()
         saved_count = 0
-        with self._get_connection() as conn:
-            cursor = conn.cursor()
-            for r in records:
-                txn_id = r.get("txn_id")
-                idemp_key = self.compute_idempotency_key(txn_id, rule_version)
-                status = r.get("status", "MATCH")
-                pm = r.get("payment_method", "")
-                amount = float(r.get("amount", 0.0))
-                exp_fee = r.get("expected_fee")
-                bill_fee = r.get("billed_fee")
-                exp_tot = r.get("expected_total")
-                bill_tot = r.get("billed_total")
-                delta = r.get("delta") if r.get("delta") is not None else (bill_tot - exp_tot if bill_tot and exp_tot else 0.0)
-                leak_amount = delta if r.get("is_leak", False) else 0.0
-                leak_type = r.get("leak_type", "NONE")
-                severity = r.get("severity", "NONE")
-                confidence = r.get("confidence", "HIGH")
-                reason = r.get("reason", "")
+        
+        # Single-writer pattern: serialize all writes
+        with _write_lock:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                for r in records:
+                    txn_id = r.get("txn_id")
+                    idemp_key = self.compute_idempotency_key(txn_id, rule_version)
+                    status = r.get("status", "MATCH")
+                    pm = r.get("payment_method", "")
+                    amount = float(r.get("amount", 0.0))
+                    exp_fee = r.get("expected_fee")
+                    bill_fee = r.get("billed_fee")
+                    exp_tot = r.get("expected_total")
+                    bill_tot = r.get("billed_total")
+                    delta = r.get("delta") if r.get("delta") is not None else (bill_tot - exp_tot if bill_tot and exp_tot else 0.0)
+                    leak_amount = delta if r.get("is_leak", False) else 0.0
+                    leak_type = r.get("leak_type", "NONE")
+                    severity = r.get("severity", "NONE")
+                    match_confidence = r.get("match_confidence", r.get("confidence", "HIGH"))
+                    reason = r.get("reason", "")
 
-                cursor.execute("""
-                    INSERT INTO audit_trail (
-                        txn_id, batch_id, rule_version, status, payment_method,
-                        amount, expected_fee, billed_fee, expected_total, billed_total,
-                        leak_amount, leak_type, severity, confidence, dispute_status,
-                        resolution_amount, idempotency_key, reason, timestamp, raw_json
-                    ) VALUES (
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT dispute_status FROM audit_trail WHERE txn_id = ?), 'none'),
-                        COALESCE((SELECT resolution_amount FROM audit_trail WHERE txn_id = ?), 0.0), ?, ?, ?, ?
-                    )
-                    ON CONFLICT(txn_id) DO UPDATE SET
-                        batch_id = excluded.batch_id,
-                        rule_version = excluded.rule_version,
-                        status = excluded.status,
-                        payment_method = excluded.payment_method,
-                        amount = excluded.amount,
-                        expected_fee = excluded.expected_fee,
-                        billed_fee = excluded.billed_fee,
-                        expected_total = excluded.expected_total,
-                        billed_total = excluded.billed_total,
-                        leak_amount = excluded.leak_amount,
-                        leak_type = excluded.leak_type,
-                        severity = excluded.severity,
-                        confidence = excluded.confidence,
-                        idempotency_key = excluded.idempotency_key,
-                        reason = excluded.reason,
-                        timestamp = excluded.timestamp,
-                        raw_json = excluded.raw_json
-                """, (
-                    txn_id, batch_id, rule_version, status, pm,
-                    amount, exp_fee, bill_fee, exp_tot, bill_tot,
-                    leak_amount, leak_type, severity, confidence,
-                    txn_id, txn_id, idemp_key, reason, now_ts, json.dumps(r)
-                ))
-                saved_count += 1
-            conn.commit()
+                    cursor.execute("""
+                        INSERT INTO audit_trail (
+                            txn_id, batch_id, rule_version, status, payment_method,
+                            amount, expected_fee, billed_fee, expected_total, billed_total,
+                            leak_amount, leak_type, severity, confidence, match_confidence, dispute_status,
+                            resolution_amount, outcome, idempotency_key, reason, timestamp, raw_json
+                        ) VALUES (
+                            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT dispute_status FROM audit_trail WHERE txn_id = ?), 'none'),
+                            COALESCE((SELECT resolution_amount FROM audit_trail WHERE txn_id = ?), 0.0),
+                            COALESCE((SELECT outcome FROM audit_trail WHERE txn_id = ?), 'pending'), ?, ?, ?, ?
+                        )
+                        ON CONFLICT(txn_id) DO UPDATE SET
+                            batch_id = excluded.batch_id,
+                            rule_version = excluded.rule_version,
+                            status = excluded.status,
+                            payment_method = excluded.payment_method,
+                            amount = excluded.amount,
+                            expected_fee = excluded.expected_fee,
+                            billed_fee = excluded.billed_fee,
+                            expected_total = excluded.expected_total,
+                            billed_total = excluded.billed_total,
+                            leak_amount = excluded.leak_amount,
+                            leak_type = excluded.leak_type,
+                            severity = excluded.severity,
+                            confidence = excluded.confidence,
+                            match_confidence = excluded.match_confidence,
+                            idempotency_key = excluded.idempotency_key,
+                            reason = excluded.reason,
+                            timestamp = excluded.timestamp,
+                            raw_json = excluded.raw_json
+                    """, (
+                        txn_id, batch_id, rule_version, status, pm,
+                        amount, exp_fee, bill_fee, exp_tot, bill_tot,
+                        leak_amount, leak_type, severity, severity, match_confidence,
+                        txn_id, txn_id, txn_id, idemp_key, reason, now_ts, json.dumps(r)
+                    ))
+                    saved_count += 1
+                conn.commit()
         return saved_count
 
-    def update_dispute(self, txn_id: str, status: str, resolution_amount: Optional[float] = 0.0) -> bool:
-        """Updates the dispute status and resolution amount for a specific transaction."""
+    def update_dispute(self, txn_id: str, status: str, resolution_amount: Optional[float] = 0.0, outcome: Optional[str] = None) -> bool:
+        """Updates the dispute status, resolution amount, and outcome for a specific transaction.
+        
+        Outcome tracks the feedback loop: 'pending' | 'accepted' | 'rejected'.
+        When a human marks a dispute rejected, outcome='rejected' triggers manual rule correction.
+        """
         valid_statuses = ["none", "submitted", "acknowledged", "resolved", "rejected"]
         if status.lower() not in valid_statuses:
             raise ValueError(f"Invalid dispute status '{status}'. Must be one of {valid_statuses}")
+        
+        valid_outcomes = ["pending", "accepted", "rejected"]
+        if outcome is None:
+            # Auto-derive outcome from status
+            if status.lower() == "rejected":
+                outcome = "rejected"
+            elif status.lower() == "resolved":
+                outcome = "accepted"
+            else:
+                outcome = "pending"
+        elif outcome.lower() not in valid_outcomes:
+            raise ValueError(f"Invalid outcome '{outcome}'. Must be one of {valid_outcomes}")
 
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE audit_trail
-                SET dispute_status = ?, resolution_amount = ?
+                SET dispute_status = ?, resolution_amount = ?, outcome = ?
                 WHERE txn_id = ?
-            """, (status.lower(), float(resolution_amount or 0.0), txn_id))
+            """, (status.lower(), float(resolution_amount or 0.0), outcome.lower(), txn_id))
             conn.commit()
             return cursor.rowcount > 0
 

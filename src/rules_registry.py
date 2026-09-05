@@ -27,23 +27,29 @@ class RulesRegistry:
                     rulesets.append({
                         "file_path": fpath,
                         "version": str(data.get("version", "1.0")),
-                        "effective_date": str(data.get("effective_date", "2025-01-01")),
+                        "effective_from": str(data.get("effective_from", data.get("effective_date", "2025-01-01"))),
+                        "effective_to": str(data.get("effective_to", "9999-12-31")),
                         "contract_id": data.get("contract_id", ""),
                         "merchant_name": data.get("merchant_name", "")
                     })
             except Exception:
                 continue
-        # Sort by effective date ascending
-        rulesets.sort(key=lambda x: x["effective_date"])
+        # Sort by effective_from ascending
+        rulesets.sort(key=lambda x: x["effective_from"])
         return rulesets
 
-    def save_ruleset(self, rules_data: Dict[str, Any], version: Optional[str] = None, effective_date: Optional[str] = None) -> str:
-        """Saves a versioned ruleset file and updates default mirror if configured."""
+    def save_ruleset(self, rules_data: Dict[str, Any], version: Optional[str] = None, effective_from: Optional[str] = None, effective_to: Optional[str] = None) -> str:
+        """Saves a versioned ruleset file with effective_from/effective_to window and updates default mirror if configured."""
         v = version or rules_data.get("version", "1.0")
         v_clean = str(v).replace(".", "_")
-        eff = effective_date or rules_data.get("effective_date", "2025-01-01")
-        filename = f"rules_v{v_clean}_{eff}.json"
+        eff_from = effective_from or rules_data.get("effective_from", rules_data.get("effective_date", "2025-01-01"))
+        eff_to = effective_to or rules_data.get("effective_to", "9999-12-31")
+        filename = f"rules_v{v_clean}_{eff_from}.json"
         target_path = os.path.join(self.rules_dir, filename)
+
+        # Ensure effective_from/effective_to are in the data
+        rules_data["effective_from"] = eff_from
+        rules_data["effective_to"] = eff_to
 
         with open(target_path, "w", encoding="utf-8") as f:
             json.dump(rules_data, f, indent=2)
@@ -60,7 +66,8 @@ class RulesRegistry:
         """
         Fetches active ruleset for a specific transaction date or version.
         If transaction_date is provided (e.g., '2025-01-15' or ISO string),
-        finds the ruleset with effective_date <= transaction_date with latest effective date.
+        finds the ruleset whose [effective_from, effective_to) window contains that date.
+        This is a single dict lookup / SQL WHERE clause against the registry.
         """
         rulesets = self.list_rulesets()
         
@@ -86,11 +93,12 @@ class RulesRegistry:
 
         txn_date_str = str(transaction_date).split("T")[0].split(" ")[0]
         
+        # rule_lookup(transaction_date): find ruleset where effective_from <= transaction_date < effective_to
         active_rs = rulesets[0]
         for rs in rulesets:
-            if rs["effective_date"] <= txn_date_str:
+            if rs["effective_from"] <= txn_date_str < rs["effective_to"]:
                 active_rs = rs
-            else:
+            elif rs["effective_from"] > txn_date_str:
                 break
 
         with open(active_rs["file_path"], "r", encoding="utf-8") as f:
@@ -102,5 +110,5 @@ _global_registry = RulesRegistry()
 def get_active_ruleset(transaction_date: Optional[str] = None, version: Optional[str] = None) -> Dict[str, Any]:
     return _global_registry.get_active_ruleset(transaction_date, version)
 
-def save_versioned_ruleset(rules_data: Dict[str, Any], version: Optional[str] = None, effective_date: Optional[str] = None) -> str:
-    return _global_registry.save_ruleset(rules_data, version, effective_date)
+def save_versioned_ruleset(rules_data: Dict[str, Any], version: Optional[str] = None, effective_from: Optional[str] = None, effective_to: Optional[str] = None) -> str:
+    return _global_registry.save_ruleset(rules_data, version, effective_from, effective_to)

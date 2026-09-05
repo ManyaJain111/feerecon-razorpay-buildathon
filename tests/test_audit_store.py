@@ -20,7 +20,7 @@ def test_audit_store_crud_and_idempotency(tmp_path):
             "delta": 5.90,
             "leak_type": "UPI_NON_ZERO_MDR",
             "severity": "MINOR",
-            "confidence": "HIGH",
+            "match_confidence": "HIGH",
             "reason": "UPI charged fee"
         },
         {
@@ -36,7 +36,7 @@ def test_audit_store_crud_and_idempotency(tmp_path):
             "delta": 0.0,
             "leak_type": "NONE",
             "severity": "NONE",
-            "confidence": "HIGH",
+            "match_confidence": "HIGH",
             "reason": "Match"
         }
     ]
@@ -75,7 +75,7 @@ def test_dispute_status_tracking(tmp_path):
             "delta": 82.60,
             "leak_type": "CAP_VIOLATION",
             "severity": "MODERATE",
-            "confidence": "HIGH",
+            "match_confidence": "HIGH",
             "reason": "Netbanking cap ignored"
         }
     ]

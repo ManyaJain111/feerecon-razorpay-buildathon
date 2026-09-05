@@ -488,6 +488,12 @@ def get_gateway_adapter(name: str) -> GatewayAdapter:
 
 ---
 
+## GST Scoping Note
+
+> **GST logic covers CGST/SGST at a flat rate on service charges; IGST, HSN-code-dependent rates, and rate-change history are out of scope for this build.**
+
+---
+
 ## Configuration
 
 ### Severity Thresholds (`config/severity_thresholds.yaml`)

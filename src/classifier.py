@@ -50,8 +50,11 @@ class TransactionClassifier:
         else:
             return SeverityEnum.MINOR.value
 
-    def _determine_confidence(self, rule_conf: float, needs_review: bool) -> str:
-        """Derives leak confidence from rule extraction certainty and needs_review flag."""
+    def _determine_match_confidence(self, rule_conf: float, needs_review: bool) -> str:
+        """Derives match confidence from rule extraction certainty and needs_review flag.
+        This is MATCH confidence (how sure the classifier is that this gateway record maps to this contract line),
+        computed from ID/amount/timestamp similarity — NOT a fee-arithmetic confidence (that part is deterministic).
+        """
         if needs_review or rule_conf < 0.85:
             return ConfidenceLevelEnum.LOW.value
         elif rule_conf >= 0.95:
@@ -87,7 +90,7 @@ class TransactionClassifier:
                 "billed_total": txn["total_billed"],
                 "delta": None,
                 "severity": SeverityEnum.NONE.value,
-                "confidence": ConfidenceLevelEnum.LOW.value if needs_review else ConfidenceLevelEnum.HIGH.value,
+                "match_confidence": ConfidenceLevelEnum.LOW.value if needs_review else ConfidenceLevelEnum.HIGH.value,
                 "source_span": source_span,
                 "needs_review": True,
                 "reason": calc_result["exception_reason"],
@@ -101,7 +104,7 @@ class TransactionClassifier:
         billed_fee = txn["fee_billed"]
 
         delta = round_curr(billed_total - expected_total)
-        confidence_level = self._determine_confidence(rule_conf, needs_review)
+        match_confidence = self._determine_match_confidence(rule_conf, needs_review)
 
         # 2. Match case
         if abs(delta) <= TOLERANCE:
@@ -122,7 +125,7 @@ class TransactionClassifier:
                 "billed_total": billed_total,
                 "delta": 0.0,
                 "severity": SeverityEnum.NONE.value,
-                "confidence": confidence_level,
+                "match_confidence": match_confidence,
                 "source_span": source_span,
                 "needs_review": needs_review,
                 "reason": "Billed fee perfectly matches contract rate schedule.",
@@ -175,7 +178,7 @@ class TransactionClassifier:
                 "billed_total": billed_total,
                 "delta": delta,
                 "severity": severity,
-                "confidence": confidence_level,
+                "match_confidence": match_confidence,
                 "source_span": source_span,
                 "needs_review": needs_review,
                 "reason": diag_reason,
@@ -201,7 +204,7 @@ class TransactionClassifier:
                 "billed_total": billed_total,
                 "delta": delta,
                 "severity": SeverityEnum.NONE.value,
-                "confidence": confidence_level,
+                "match_confidence": match_confidence,
                 "source_span": source_span,
                 "needs_review": needs_review,
                 "reason": f"Merchant undercharged by gateway: Billed ₹{billed_total:.2f} vs Expected ₹{expected_total:.2f}.",

@@ -7,21 +7,23 @@ def test_rules_registry_date_lookup(tmp_path):
     reg_dir = tmp_path / "rules"
     reg = RulesRegistry(rules_dir=str(reg_dir), default_rules_path=None)
 
-    # Save rule version 1 (effective 2025-01-01)
+    # Save rule version 1 (effective_from 2025-01-01, effective_to 2025-05-31)
     r1 = {
         "version": "1.0",
-        "effective_date": "2025-01-01",
+        "effective_from": "2025-01-01",
+        "effective_to": "2025-05-31",
         "rules": {"payment_methods": {"UPI": {"rate_pct": 0.0}}}
     }
-    reg.save_ruleset(r1, version="1.0", effective_date="2025-01-01")
+    reg.save_ruleset(r1, version="1.0", effective_from="2025-01-01", effective_to="2025-05-31")
 
-    # Save rule version 2 (effective 2025-06-01)
+    # Save rule version 2 (effective_from 2025-06-01, effective_to 9999-12-31)
     r2 = {
         "version": "2.0",
-        "effective_date": "2025-06-01",
+        "effective_from": "2025-06-01",
+        "effective_to": "9999-12-31",
         "rules": {"payment_methods": {"UPI": {"rate_pct": 0.10}}}
     }
-    reg.save_ruleset(r2, version="2.0", effective_date="2025-06-01")
+    reg.save_ruleset(r2, version="2.0", effective_from="2025-06-01", effective_to="9999-12-31")
 
     # Query before June 1
     active_jan = reg.get_active_ruleset(transaction_date="2025-03-15")

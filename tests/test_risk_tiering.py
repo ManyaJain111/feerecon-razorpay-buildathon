@@ -39,7 +39,7 @@ def test_risk_severity_and_confidence():
     }
     res_upi = classifier.classify_transaction(upi_leak)
     assert res_upi["status"] == "LEAK"
-    assert res_upi["confidence"] == "LOW"
+    assert res_upi["match_confidence"] == "LOW"
 
     # Netbanking large leak (>1000 delta) -> severity should be CRITICAL
     nb_leak = {
@@ -53,7 +53,7 @@ def test_risk_severity_and_confidence():
     res_nb = classifier.classify_transaction(nb_leak)
     assert res_nb["status"] == "LEAK"
     assert res_nb["severity"] == "CRITICAL"
-    assert res_nb["confidence"] == "HIGH"
+    assert res_nb["match_confidence"] == "HIGH"
 
 def test_trend_analyzer_detection(tmp_path):
     db_path = str(tmp_path / "test_trends.db")

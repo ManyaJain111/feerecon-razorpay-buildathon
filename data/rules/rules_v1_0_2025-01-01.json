@@ -12,7 +12,8 @@
         "confidence": 0.99,
         "source_span": "All standard UPI transactions... charged at 0.00% (Zero MDR) with \u20b90.00 fixed platform fee.",
         "extraction_method": "rule_based",
-        "needs_review": false
+        "needs_review": false,
+        "status": "verified"
       },
       "DOMESTIC_CARD": {
         "type": "tiered_volume",
@@ -24,7 +25,8 @@
             "tier_name": "Tier 1 (Base)",
             "confidence": 0.98,
             "source_span": "Tier 1 (Base Tier): Monthly volume up to \u20b95,00,000 (inclusive) -> 2.00% MDR per transaction.",
-            "needs_review": false
+            "needs_review": false,
+            "status": "verified"
           },
           {
             "min_volume": 500000.01,
@@ -33,7 +35,8 @@
             "tier_name": "Tier 2 (Growth)",
             "confidence": 0.98,
             "source_span": "Tier 2 (Growth Tier): Monthly volume from \u20b95,00,000.01 up to \u20b920,00,000.00 (inclusive) -> 1.75% MDR per transaction.",
-            "needs_review": false
+            "needs_review": false,
+            "status": "verified"
           },
           {
             "min_volume": 2000000.01,
@@ -42,13 +45,15 @@
             "tier_name": "Tier 3 (Enterprise)",
             "confidence": 0.98,
             "source_span": "Tier 3 (Enterprise Tier): Monthly volume exceeding \u20b920,00,000.00 -> 1.50% MDR per transaction.",
-            "needs_review": false
+            "needs_review": false,
+            "status": "verified"
           }
         ],
         "confidence": 0.98,
         "source_span": "Domestic card transactions are billed based on cumulative monthly settlement volume processed to date within the current calendar month",
         "extraction_method": "rule_based",
-        "needs_review": false
+        "needs_review": false,
+        "status": "verified"
       },
       "NETBANKING": {
         "type": "flat_with_cap",
@@ -57,7 +62,8 @@
         "confidence": 0.97,
         "source_span": "Standard Netbanking... flat rate of 1.80% MDR per transaction, subject to a maximum fee cap of \u20b920.00 per transaction (excluding GST).",
         "extraction_method": "rule_based",
-        "needs_review": false
+        "needs_review": false,
+        "status": "verified"
       },
       "INTERNATIONAL_CARD": {
         "type": "flat_plus_fixed",
@@ -66,7 +72,8 @@
         "confidence": 0.96,
         "source_span": "International credit and debit cards issued outside the Republic of India shall be charged at 3.00% MDR plus a flat fixed surcharge of \u20b97.00 per transaction.",
         "extraction_method": "rule_based",
-        "needs_review": false
+        "needs_review": false,
+        "status": "verified"
       },
       "WALLET": {
         "type": "flat",
@@ -75,7 +82,8 @@
         "confidence": 0.95,
         "source_span": "Prepaid wallets (Paytm, Mobikwik, Amazon Pay) and approved BNPL payment rails (Simpl, LazyPay) shall be charged at 2.10% MDR per transaction.",
         "extraction_method": "rule_based",
-        "needs_review": false
+        "needs_review": false,
+        "status": "verified"
       }
     },
     "refund_policy": {
@@ -85,7 +93,8 @@
       "confidence": 0.98,
       "source_span": "standard processing fee of \u20b95.00 per refund event... initiated within 24 hours... 100% waived (\u20b90.00).",
       "extraction_method": "rule_based",
-      "needs_review": false
+      "needs_review": false,
+      "status": "verified"
     },
     "instant_settlement": {
       "rate_pct": 0.15,
@@ -96,14 +105,18 @@
       "confidence": 0.94,
       "source_span": "Instant Settlements... additional 0.15% settlement fee... risk_rating is undefined or flagged as tier SPECIAL_REVIEW require manual offline authorization",
       "extraction_method": "rule_based",
-      "needs_review": false
+      "needs_review": false,
+      "status": "verified"
     },
     "statutory_tax": {
       "gst_rate_pct": 18.0,
       "confidence": 0.99,
       "source_span": "All fees (MDR, fixed fees, and refund processing fees) are subject to applicable Goods and Services Tax (GST) at 18.00%",
       "extraction_method": "rule_based",
-      "needs_review": false
+      "needs_review": false,
+      "status": "verified"
     }
-  }
+  },
+  "effective_from": "2025-01-01",
+  "effective_to": "9999-12-31"
 }

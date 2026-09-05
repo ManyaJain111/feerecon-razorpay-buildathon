@@ -36,7 +36,8 @@ def create_run_manifest(
     rules_file: str,
     summary_metrics: Dict[str, Any],
     gateway: str = "razorpay",
-    manifest_dir: str = "reports"
+    manifest_dir: str = "reports",
+    contract_file: Optional[str] = None
 ) -> str:
     """
     Creates and saves a run manifest JSON file.
@@ -46,6 +47,7 @@ def create_run_manifest(
     timestamp = now.strftime("%Y%m%d_%H%M%S")
     settlement_hash = compute_file_sha256(settlement_file)
     rules_hash = compute_file_sha256(rules_file)
+    contract_hash = compute_file_sha256(contract_file) if contract_file else "NOT_PROVIDED"
     git_commit = get_git_commit_hash()
 
     manifest_data = {
@@ -55,7 +57,9 @@ def create_run_manifest(
         "git_commit": git_commit,
         "inputs": {
             "settlement_file": settlement_file,
-            "settlement_sha256": settlement_hash,
+            "settlement_file_sha256": settlement_hash,
+            "contract_file": contract_file or "NOT_PROVIDED",
+            "contract_file_sha256": contract_hash,
             "rules_file": rules_file,
             "rules_version": rules_version,
             "rules_sha256": rules_hash

@@ -208,7 +208,7 @@ def main():
         elif disagreements:
             print(f"[!] Proceeding with --force despite {len(disagreements)} flagged extraction disagreements.")
 
-        save_versioned_ruleset(rules_data, version=rules_data.get("version", "1.0"), effective_date=rules_data.get("effective_date", "2025-01-01"))
+        save_versioned_ruleset(rules_data, version=rules_data.get("version", "1.0"), effective_from=rules_data.get("effective_from", rules_data.get("effective_date", "2025-01-01")), effective_to=rules_data.get("effective_to", "9999-12-31"))
         print(f"[OK] Extracted rules verified and saved to registry and: {args.rules}")
     else:
         print(f"[*] Loading structured pricing rules (Version: {args.rules_version or 'active'}) from registry...")
@@ -263,7 +263,8 @@ def main():
         rules_version=rule_version,
         rules_file=args.rules,
         summary_metrics=summary,
-        gateway=args.gateway
+        gateway=args.gateway,
+        contract_file=args.contract
     )
     print(f"[OK] Immutable run manifest logged to: {manifest_path}")
 

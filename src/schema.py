@@ -74,3 +74,8 @@ class DisputeStatusEnum(str, Enum):
     ACKNOWLEDGED = "acknowledged"
     RESOLVED = "resolved"
     REJECTED = "rejected"
+
+class DisputeOutcomeEnum(str, Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
