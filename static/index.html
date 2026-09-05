@@ -96,25 +96,30 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);font-
       </div>
     </div>
     <div class="hero-right">
-      <div class="panel audit-panel">
-        <div class="panel-title">Latest audit</div>
-        <div class="audit-panel">
-          <div><span class="label">AUDIT</span> <span class="value">BATCH_A1B2C3D4</span></div>
-          <div><span class="label">RULESET</span> <span class="value">v1.0</span></div>
-          <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px"></div>
-          <div><span class="label">TRANSACTIONS</span> <span class="value">83</span></div>
-          <div><span class="label">GMV</span> <span class="value">₹713,846.00</span></div>
-          <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px"></div>
-          <div><span class="label">BILLED FEES</span> <span class="value">₹12,179.35</span></div>
-          <div><span class="label">EXPECTED FEES</span> <span class="value">₹10,989.74</span></div>
-          <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px"></div>
-          <div><span class="label big">DETECTED LEAKAGE</span> <span class="value big">₹576.01</span></div>
-          <div style="margin-top:12px;color:var(--muted);font-size:11px">18.07% of transactions require recovery</div>
-          <div style="margin-top:16px;display:flex;gap:24px;font-size:12px">
-            <div><span class="value" style="color:#b91c1c">15</span> LEAKS</div>
-            <div><span class="value" style="color:#b45309">3</span> EXCEPTIONS</div>
-            <div><span class="value" style="color:#15803d">65</span> MATCHED</div>
-          </div>
+      <div class="panel audit-panel" id="metrics-panel">
+        <div class="panel-title">Quality & Recovery Metrics</div>
+        <div class="audit-panel" style="font-size:12px;line-height:1.7">
+          <div style="font-weight:600;margin-bottom:4px">Detection Quality</div>
+          <div><span class="label">Precision (overall)</span> <span class="value" id="m-precision">—</span></div>
+          <div><span class="label">Recall (overall)</span> <span class="value" id="m-recall">—</span></div>
+          <div><span class="label">Precision@5 / @10 / @20 / @50</span> <span class="value" id="m-prec-k">—</span></div>
+          <div><span class="label">Recall@5 / @10 / @20 / @50</span> <span class="value" id="m-rec-k">—</span></div>
+          <div><span class="label">Exception rate</span> <span class="value" id="m-exc-rate">—</span></div>
+
+          <div style="margin-top:10px;font-weight:600">Recovery</div>
+          <div><span class="label">Overall recovery rate</span> <span class="value" id="m-recovery">—</span></div>
+          <div><span class="label">By leak type</span> <span class="value" id="m-recovery-type">—</span></div>
+
+          <div style="margin-top:10px;font-weight:600">Compliant Escalation</div>
+          <div><span class="label">Escalation adherence</span> <span class="value" id="m-escalation">—</span></div>
+          <div><span class="label">Citation accuracy</span> <span class="value" id="m-citation">—</span></div>
+
+          <div style="margin-top:10px;font-weight:600">Stopping Rules</div>
+          <div><span class="label">Actions within bounds</span> <span class="value" id="m-bounds">—</span></div>
+          <div><span class="label">Kill‑switch trigger rate</span> <span class="value" id="m-kill">—</span></div>
+
+          <div style="margin-top:10px;font-weight:600">Audit Trail</div>
+          <div><span class="label">Manifest completeness</span> <span class="value" id="m-manifest">—</span></div>
         </div>
       </div>
     </div>
@@ -208,10 +213,40 @@ Trend --> Report</div>
     </div>
   </section>
 
-  <footer>
+<footer>
     <span>FeeRecon • deterministic fee engine • NVIDIA NIM inference</span>
     <span>MIT License</span>
   </footer>
-</main>
+  <script>
+    async function loadMetrics() {
+      try {
+        const res = await fetch('/api/metrics');
+        const m = await res.json();
+        // Detection quality
+        document.getElementById('m-precision').textContent = (m.detection_quality.precision_overall * 100).toFixed(1) + '%';
+        document.getElementById('m-recall').textContent = (m.detection_quality.recall_overall * 100).toFixed(1) + '%';
+        const pk = m.detection_quality.precision_at_k;
+        document.getElementById('m-prec-k').textContent = `@5:${(pk[5]*100).toFixed(1)}% @10:${(pk[10]*100).toFixed(1)}% @20:${(pk[20]*100).toFixed(1)}% @50:${(pk[50]*100).toFixed(1)}%`;
+        const rk = m.detection_quality.recall_at_k;
+        document.getElementById('m-rec-k').textContent = `@5:${(rk[5]*100).toFixed(1)}% @10:${(rk[10]*100).toFixed(1)}% @20:${(rk[20]*100).toFixed(1)}% @50:${(rk[50]*100).toFixed(1)}%`;
+        document.getElementById('m-exc-rate').textContent = (m.detection_quality.exception_rate * 100).toFixed(1) + '%';
+        // Recovery
+        document.getElementById('m-recovery').textContent = (m.recovery.recovery_rate_overall * 100).toFixed(1) + '%';
+        const byType = m.recovery.recovery_rate_by_leak_type;
+        document.getElementById('m-recovery-type').textContent = Object.entries(byType).map(([k,v])=> `${k}:${(v*100).toFixed(1)}%`).join(' | ');
+        // Escalation
+        document.getElementById('m-escalation').textContent = (m.compliant_escalation.escalation_adherence_rate * 100).toFixed(1) + '%';
+        document.getElementById('m-citation').textContent = (m.compliant_escalation.citation_accuracy * 100).toFixed(1) + '%';
+        // Stopping rules
+        document.getElementById('m-bounds').textContent = (m.stopping_rules.actions_within_bounds_rate * 100).toFixed(1) + '%';
+        document.getElementById('m-kill').textContent = (m.stopping_rules.kill_switch_trigger_rate * 100).toFixed(1) + '%';
+        // Audit trail
+        document.getElementById('m-manifest').textContent = (m.audit_trail.manifest_completeness * 100).toFixed(1) + '%';
+      } catch (e) {
+        console.error('Failed to load metrics', e);
+      }
+    }
+    loadMetrics();
+  </script>
 </body>
 </html>

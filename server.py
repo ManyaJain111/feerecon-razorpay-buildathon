@@ -29,6 +29,7 @@ from src.pdf_processor import (
     extract_rules_from_pdf_text,
     parse_statement_from_pdf_text
 )
+from compute_metrics import compute as compute_metrics_fn
 
 # ---------------------------------------------------------------------------
 # Runtime NVIDIA NIM API key store (overrides env var; set via /api/set-nim-key)
@@ -1046,6 +1047,14 @@ def create_app():
             "model": "meta/llama-3.1-70b-instruct",
             "endpoint": "https://integrate.api.nvidia.com/v1/chat/completions"
         }
+
+    @app.get("/api/metrics")
+    async def get_metrics():
+        """Return reproducible quality & recovery metrics."""
+        try:
+            return compute_metrics_fn()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
     return app
 
