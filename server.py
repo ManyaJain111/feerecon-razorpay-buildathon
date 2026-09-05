@@ -292,9 +292,18 @@ class ReconcileHTTPHandler(BaseHTTPRequestHandler):
             self._send_response_json({"status": "ok", "service": "fee-recon-backend"})
             return
 
+        if path == "/favicon.ico":
+            self.send_error(404, "Not found")
+            return
+
         if path in ["/", "/index.html"]:
             index_path = str(STATIC_DIR / "index.html")
             self._send_file(index_path, "text/html; charset=utf-8")
+            return
+
+        if path == "/welcome":
+            welcome_path = str(BASE_DIR / "frontend" / "welcome.html")
+            self._send_file(welcome_path, "text/html; charset=utf-8")
             return
 
         if path.startswith("/static/"):
@@ -742,6 +751,14 @@ def create_app():
             with open(upload_file, "r", encoding="utf-8") as f:
                 return f.read()
         return HTMLResponse("<html><body><h1>Upload page not found</h1></body></html>", status_code=404)
+
+    @app.get("/welcome", response_class=HTMLResponse)
+    def welcome_page():
+        welcome_file = BASE_DIR / "frontend" / "welcome.html"
+        if welcome_file.exists():
+            with open(welcome_file, "r", encoding="utf-8") as f:
+                return f.read()
+        return HTMLResponse("<html><body><h1>Welcome page not found</h1></body></html>", status_code=404)
 
     @app.get("/api/reconciliation")
     def get_reconciliation():
