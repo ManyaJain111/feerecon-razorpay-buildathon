@@ -4,6 +4,8 @@ Reconciles gateway settlement data against a merchant's actual pricing contract 
 
 ---
 
+![](static/image.png)
+
 ## a. Problem Statement
 
 Merchants negotiate custom pricing with payment gateways (Razorpay, Stripe, PayU) tiered volume discounts, zero-MDR instruments like UPI, capped fees on Netbanking, conditional refund waivers, GST on top. The contract sits in a PDF. Settlement data arrives as thousands of CSV rows. Nobody actually checks the CSV against the PDF at scale, so gateways routinely apply the wrong tier or skip a waiver, and 0.5–2.5% of processed value leaks out unnoticed.

@@ -3,229 +3,406 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fee Leakage Detector — Payment Fee Reconciliation</title>
+<title>FeeRecon — Payment Fee Reconciliation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-  <script>mermaid.initialize({startOnLoad:true,theme:'base',fontFamily:'Inter'});</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- Mermaid retained for backend/other pages -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,theme:'base',fontFamily:'Inter'});</script>
+<!-- AOS: scroll-triggered reveal animations -->
+<link href="https://cdn.jsdelivr.net/npm/aos@2.3.1/dist/aos.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/aos@2.3.1/dist/aos.js"></script>
 <style>
-:root{
-  --bg:#fafafa;
-  --panel:#ffffff;
-  --border:#e5e7eb;
-  --text:#111827;
-  --muted:#6b7280;
-  --accent:#1f2937;
-  --accent-light:#374151;
-  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
-  --sans:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+:root {
+  --bg: #ffffff;
+  --surface: #fafafa;
+  --border: #e5e7eb;
+  --text: #111827;
+  --muted: #6b7280;
+  --leakage: #dc2626; 
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
-a{color:inherit;text-decoration:none}
-header{display:flex;justify-content:space-between;align-items:center;padding:12px 24px;border-bottom:1px solid var(--border);background:var(--panel);position:sticky;top:0;z-index:10}
-.brand{display:flex;align-items:center;gap:12px}
-.brand-title{font-weight:700;font-size:15px;letter-spacing:-0.3px}
-.brand-sub{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
-nav{display:flex;gap:8px;align-items:center}
-nav a{padding:6px 10px;border-radius:4px;font-size:12px;font-weight:500;color:var(--muted)}
-nav a:hover{background:#f3f4f6;color:var(--text)}
-.meta-right{display:flex;gap:16px;align-items:center;font-size:11px;color:var(--muted)}
-.meta-right span{display:flex;align-items:center;gap:4px}
-main{max-width:1200px;margin:0 auto;padding:24px}
-.hero{margin-bottom:32px}
-.hero-left h1{font-size:28px;font-weight:700;line-height:1.2;margin-bottom:8px}
-.hero-left .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;display:block}
-.hero-left p{color:var(--muted);margin-bottom:20px;max-width:560px}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--panel);color:var(--text);transition:background .15s,border-color .15s}
-.btn:hover{background:#f3f4f6}
-.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn-primary:hover{background:var(--accent-light);border-color:var(--accent-light)}
-.panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px}
-.panel-title{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:10px;font-weight:600}
-.audit-panel{font-family:var(--mono);font-size:13px;line-height:1.8}
-.audit-panel .label{color:var(--muted)}
-.audit-panel .value{font-weight:600}
-.audit-panel .big{font-size:22px;font-weight:700;color:var(--accent)}
-.chain{display:flex;gap:8px;flex-wrap:wrap;margin-top:24px}
-.chain-step{flex:1;min-width:140px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px}
-.chain-step .step-name{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);font-weight:600;margin-bottom:4px}
-.chain-step .step-desc{font-size:12px;color:var(--text)}
-.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-.metric-card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px}
-.metric-card .metric-name{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);margin-bottom:4px}
-.metric-card .metric-value{font-family:var(--mono);font-size:14px;font-weight:600}
-footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Boring Navigation */
+header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 10; }
+.brand { font-weight: 700; font-size: 16px; letter-spacing: -0.3px; }
+nav { display: flex; gap: 24px; align-items: center; font-size: 14px; font-weight: 400; color: var(--text); }
+.nav-links a { color: var(--muted); }
+.nav-links a:hover { color: var(--text); }
+
+/* Functional Buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 8px 16px; border-radius: 2px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid var(--text); transition: none; text-decoration: none !important; }
+.btn-primary { background: var(--text); color: var(--bg); }
+.btn-primary:hover { background: #374151; border-color: #374151; }
+.btn-outline { background: transparent; color: var(--text); }
+.btn-outline:hover { background: var(--surface); }
+
+/* Layout Grid */
+main { max-width: 800px; margin: 0 auto; padding: 48px 24px; }
+section { margin-bottom: 64px; }
+
+/* Hero */
+.hero { text-align: center; }
+.eyebrow { font-family: var(--mono); font-size: 11px; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 16px; }
+.hero h1 { font-size: 36px; font-weight: 700; line-height: 1.1; letter-spacing: -1px; margin-bottom: 16px; color: var(--text); }
+.hero p { font-size: 16px; color: var(--muted); margin: 0 auto 24px; max-width: 600px; }
+.tech-spec { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-bottom: 32px; }
+.hero-actions { display: flex; gap: 12px; justify-content: center; margin-bottom: 48px; }
+
+/* UI Mockup / Output Window */
+.output-window { border: 1px solid var(--border); border-radius: 2px; background: var(--bg); text-align: left; font-family: var(--mono); font-size: 13px; margin: 0 auto; overflow: hidden; }
+.output-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 8px 12px; color: var(--muted); font-size: 11px; display: flex; justify-content: space-between; }
+.output-body { padding: 24px; }
+.output-stat { margin-bottom: 16px; }
+.output-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+.output-table th, .output-table td { text-align: left; padding: 8px 0; border-bottom: 1px dashed var(--border); }
+.output-table th { color: var(--muted); font-weight: 400; font-size: 11px; }
+.leakage-amt { color: var(--leakage); font-weight: 700; }
+
+/* Problem Statement */
+.problem { margin: 0 auto; max-width: 600px; }
+.section-label { font-family: var(--mono); font-size: 11px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+.problem p { font-size: 15px; margin-bottom: 16px; color: var(--text); line-height: 1.6; }
+
+/* Technical Note */
+.tech-note { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 16px; text-align: center; }
+.tech-note strong { color: var(--text); }
+
+/* Pipeline — enlarged vertical stepper */
+.pipeline-section { padding: 24px 0 8px; }
+.pipeline-steps { position: relative; margin-top: 40px; }
+.pipeline-steps::before {
+  content: "";
+  position: absolute;
+  left: 39px;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: var(--border);
+}
+.pipeline-step { position: relative; display: flex; gap: 28px; align-items: flex-start; padding: 36px 0; }
+.pipeline-step:first-child { padding-top: 0; }
+.pipeline-step:last-child { padding-bottom: 0; }
+.step-num {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--muted);
+  min-width: 78px;
+  padding-top: 6px;
+  position: relative;
+  z-index: 1;
+}
+.step-num::before {
+  content: "";
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text);
+  margin-right: 10px;
+  vertical-align: middle;
+}
+.step-content { flex: 1; padding-bottom: 4px; }
+.step-content h3 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 8px; }
+.step-content p { font-size: 14.5px; color: var(--muted); max-width: 460px; line-height: 1.6; margin-bottom: 10px; }
+.step-role { font-family: var(--mono); font-size: 11.5px; color: var(--text); background: var(--surface); border: 1px solid var(--border); display: inline-block; padding: 3px 8px; border-radius: 2px; }
+
+/* Detected Table Section */
+.findings-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; }
+.findings-table th { text-align: left; font-size: 11px; color: var(--muted); padding-bottom: 8px; border-bottom: 1px solid var(--border); font-weight: 400; }
+.findings-table td { padding: 12px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+
+/* Metrics */
+.metrics-row { display: flex; gap: 48px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 24px 0; }
+.metric-val { font-family: var(--mono); font-size: 36px; font-weight: 700; color: var(--text); line-height: 1; margin-bottom: 8px; }
+.metric-lbl { font-size: 13px; color: var(--muted); }
+
+/* Closing / Repo */
+.closing { text-align: center; padding: 40px 0 8px; border-top: 1px solid var(--border); }
+.repo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  border: 1px solid var(--text);
+  padding: 16px 28px;
+  border-radius: 2px;
+  margin-top: 8px;
+}
+.repo-link:hover { background: var(--text); color: var(--bg); text-decoration: none; }
+.repo-arrow { font-weight: 400; }
+.credit { margin-top: 20px; font-size: 14px; color: var(--muted); }
+.credit strong { color: var(--text); font-weight: 700; }
+
+@media (max-width: 560px) {
+  .repo-link { font-size: 14px; padding: 14px 18px; word-break: break-all; text-align: left; }
+}
+
+/* Footer */
+footer { border-top: 1px solid var(--border); padding: 24px; display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+@media (max-width: 560px) {
+  .pipeline-steps::before { left: 5px; }
+  .pipeline-step { gap: 18px; }
+  .step-num { min-width: unset; font-size: 0; }
+  .step-num::before { margin-right: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
 </style>
 </head>
 <body>
+
 <header>
-  <div class="brand">
-    <div class="brand-title">Fee Leakage Detector</div>
-    <div class="brand-sub">RECONCILIATION / CONTROL</div>
-  </div>
+  <a href="/" class="brand" style="text-decoration: none;">FeeRecon</a>
   <nav>
-    <a href="/" class="active">Home</a>
-    <a href="demo.html">Demo</a>
-    <a href="upload.html">Upload</a>
-    <a href="https://github.com/ManyaJain111/feerecon-razorpay-buildathon/" target="_blank">GitHub</a>
+    <div class="nav-links" style="display: flex; gap: 24px;">
+      <a href="demo.html">Demo</a>
+      <a href="#how-it-works">How it works</a>
+      <a href="https://github.com/ManyaJain111/feerecon-razorpay-buildathon/" target="_blank">GitHub</a>
+    </div>
+    <a href="demo.html" class="btn btn-outline" style="margin-left: 16px;">Run Demo</a>
   </nav>
-  <div class="meta-right">
-    <span>Inference: NVIDIA NIM</span>
-    <span>Engine: deterministic</span>
-  </div>
 </header>
 
 <main>
+  <!-- HERO -->
   <section class="hero">
-    <div class="hero-left">
-      <span class="eyebrow">PAYMENT FEE RECONCILIATION</span>
-      <h1>Find what your gateway charged that your contract didn't allow.</h1>
-      <p>Fee Leakage Detector converts pricing contracts into executable rules, recomputes settlement fees, and produces transaction-level evidence for every discrepancy.</p>
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <a class="btn btn-primary" href="demo.html">Run sample audit</a>
-        <a class="btn" href="upload.html">Upload contract + statement</a>
+    <span class="eyebrow">Payment Fee Reconciliation</span>
+    <h1>Your payment gateway can charge the wrong fee. Find it.</h1>
+    <p>Upload the contract and settlement statement. We recompute every transaction and show where the numbers disagree.</p>
+    
+    <div class="tech-spec">
+      Contract PDF + Settlement CSV &rarr; versioned rules &rarr; deterministic fee engine
+    </div>
+
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="demo.html">Run demo</a>
+      <a class="btn btn-outline" href="upload.html">Upload files</a>
+    </div>
+
+    <!-- TERMINAL / AUDIT MOCKUP -->
+    <div class="output-window" data-aos="fade-up">
+      <div class="output-header">
+        <span>AUDIT RUN #0042</span>
+        <span>STATUS: COMPLETE</span>
       </div>
-    </div>
-  </section>
-
-  <section style="margin-top:32px">
-    <div class="panel-title">Pipeline</div>
-    <div class="chain">
-      <div class="chain-step"><div class="step-name">CONTRACT</div><div class="step-desc">PDF / CSV</div></div>
-      <div class="chain-step"><div class="step-name">RULESET</div><div class="step-desc">versioned + SHA256</div></div>
-      <div class="chain-step"><div class="step-name">SETTLEMENT</div><div class="step-desc">83 transactions</div></div>
-      <div class="chain-step"><div class="step-name">RECONCILIATION</div><div class="step-desc">deterministic fee engine</div></div>
-      <div class="chain-step"><div class="step-name">EVIDENCE</div><div class="step-desc">transaction + clause</div></div>
-      <div class="chain-step"><div class="step-name">DISPUTE</div><div class="step-desc">itemized claim</div></div>
-    </div>
-  </section>
-
-  <section style="margin-top:32px">
-    <div class="panel-title">Architecture</div>
-    <div class="panel">
-      <div class="mermaid">
-flowchart TD
-    A["Payment Contract<br/>(PDF/Markdown)"] --> B["LLM Rule Extractor"]
-    B --> C["Rules Registry<br/>(versioned, time-effective)"]
-
-    C --> D["Gateway Adapters<br/>Razorpay / Stripe / PayU"]
-    D --> E["Fee Engine<br/>tiers, caps, GST, refunds"]
-    C --> E
-
-    E --> F["Transaction Classifier<br/>MATCH / LEAK / EXCEPTION"]
-
-    C --> G["Audit Store (SQLite)<br/>idempotency + dispute tracking"]
-    G --> H["Dispute Generator<br/>auto-cites contract clauses"]
-    H --> I["Trend Analyzer<br/>recurring leak patterns"]
-
-    F --> J["Immutable Run Manifest<br/>git SHA + timestamp"]
-    I --> J
-
-    J --> K["Audit Report & Web UI"]
-      </div>
-      <p style="margin-top:12px;font-size:11px;color:var(--muted)">
-        <strong>Core principle:</strong> LLM used only for contract comprehension (rule extraction).
-        All fee arithmetic runs in a pure deterministic engine — zero LLM in the financial calculation loop.
-      </p>
-    </div>
-  </section>
-
-  <section style="margin-top:32px">
-    <div class="panel-title">Systemic issue</div>
-    <div class="panel" style="border-left:4px solid #b91c1c">
-      <div style="font-weight:600;margin-bottom:4px">WRONG_TIER_APPLIED</div>
-      <div style="color:var(--muted);font-size:12px;margin-bottom:8px">3 batches • 21 transactions • ₹831.87 cumulative leakage</div>
-      <div style="font-size:11px;color:#b91c1c;font-weight:600;margin-bottom:8px">HIGH SEVERITY</div>
-      <div style="color:var(--muted);font-size:12px">Volume bracket mismatch detected. Gateway may be systematically applying the wrong pricing tier.</div>
-      <a href="#" class="btn" style="margin-top:12px">Review contract</a>
-    </div>
-  </section>
-
-  <section style="margin-top:32px">
-    <div class="panel audit-panel" id="metrics-panel">
-      <div class="panel-title">Quality &amp; Recovery Metrics</div>
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <div class="metric-name">Precision (overall)</div>
-          <div class="metric-value" id="m-precision">95.0%</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px">TP / (TP + FP) vs ground_truth.json</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-name">F1-Score</div>
-          <div class="metric-value" id="m-f1">93.5%</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px">Harmonic mean of precision &amp; recall</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-name">Precision@K</div>
-          <div class="metric-value" id="m-prec-k">@5: 100% / @10: 90% / @20: 85% / @50: 80%</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px">Top-K by leakage amount — triage trustworthiness</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-name">Recall@K</div>
-          <div class="metric-value" id="m-rec-k">@5: 25% / @10: 45% / @20: 75% / @50: 95%</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px">Real leaks surfacing early in ranked queue</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-name">Exception rate</div>
-          <div class="metric-value" id="m-exc-rate">4.0%</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px">Txns routed to EXCEPTION (missing/malformed fields)</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-name">Recovery rate (overall)</div>
-          <div class="metric-value" id="m-recovery">70.0%</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px">% of disputed amount credited back by gateway</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-name">Recovery rate by leak type</div>
-          <div class="metric-value" id="m-recovery-type" style="font-size:11px;line-height:1.8">
-            CAP_VIOLATION: 85%<br>
-            INTL_RATE: 80%<br>
-            WRONG_TIER: 75%<br>
-            MISSED_WAIVER: 60%
-          </div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-name">Citation accuracy</div>
-          <div class="metric-value" id="m-citation">95.0%</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px">Correct contract clause cited per violation type</div>
+      <div class="output-body">
+        <div class="output-stat">83 transactions checked</div>
+        <div class="output-stat leakage-amt" style="font-size: 14px;">₹831.87 leakage detected</div>
+        
+        <table class="output-table">
+          <tr>
+            <th>VIOLATION</th>
+            <th style="text-align: right;">IMPACT</th>
+          </tr>
+          <tr>
+            <td>WRONG_TIER_APPLIED</td>
+            <td style="text-align: right;" class="leakage-amt">₹831.87</td>
+          </tr>
+          <tr>
+            <td>CAP_VIOLATION</td>
+            <td style="text-align: right;" class="leakage-amt">₹214.20</td>
+          </tr>
+          <tr>
+            <td>MISSED_WAIVER</td>
+            <td style="text-align: right;" class="leakage-amt">₹102.40</td>
+          </tr>
+        </table>
+        
+        <div style="margin-top: 24px;">
+          <a href="demo.html" style="color: var(--text); text-decoration: underline;">[ Open audit details ]</a>
         </div>
       </div>
     </div>
   </section>
 
-<section style="margin-top:32px">
-    <div class="panel-title">System Configuration</div>
-    <div class="panel">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
-        <div class="metric-card">
-          <div class="metric-name">LLM</div>
-          <div class="metric-value">Llama 3.1 70B Instruct · 128K context</div>
+  <!-- THE PROBLEM -->
+  <section class="problem" data-aos="fade-up">
+    <div class="section-label">The Problem</div>
+    <p>Payment pricing isn't one percentage. Contracts contain tiers, caps, waivers, GST, and transaction-specific exceptions.</p>
+    <p>Reconciliation means checking those rules against every settlement. Manual review doesn't scale, so discrepancies go unnoticed.</p>
+  </section>
+
+  <!-- HOW IT WORKS / PIPELINE -->
+  <section id="how-it-works" class="pipeline-section">
+    <div class="section-label" data-aos="fade-up">Pipeline</div>
+
+    <div class="pipeline-steps">
+      <div class="pipeline-step" data-aos="fade-right" data-aos-delay="0">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <h3>Contract</h3>
+          <p>Upload the merchant agreement as a PDF. Every clause that touches pricing — tiers, caps, waivers, exceptions — gets pulled out as a candidate rule.</p>
+          <span class="step-role">LLM: contract interpretation</span>
         </div>
-        <div class="metric-card">
-          <div class="metric-name">Extraction</div>
-          <div class="metric-value">3-pass consensus · deterministic fallback</div>
+      </div>
+
+      <div class="pipeline-step" data-aos="fade-right" data-aos-delay="120">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <h3>Rules</h3>
+          <p>Clauses become versioned, structured rules with a source citation attached to each one — auditable and diffable, not fee logic buried in prose.</p>
+          <span class="step-role">LLM: rule extraction</span>
         </div>
-        <div class="metric-card">
-          <div class="metric-name">Fee Engine</div>
-          <div class="metric-value">Deterministic · rule-based</div>
+      </div>
+
+      <div class="pipeline-step" data-aos="fade-right" data-aos-delay="240">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <h3>Reconcile</h3>
+          <p>Every settled transaction in the CSV is recomputed against the rule set. Fee math runs in code, not the model, so results are deterministic and repeatable.</p>
+          <span class="step-role">Code: fee calculation</span>
         </div>
-        <div class="metric-card">
-          <div class="metric-name">Confidence</div>
-          <div class="metric-value">95% high · 85% medium</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-name">Processing</div>
-          <div class="metric-value">Batch reconciliation · auto-validation</div>
+      </div>
+
+      <div class="pipeline-step" data-aos="fade-right" data-aos-delay="360">
+        <div class="step-num">04</div>
+        <div class="step-content">
+          <h3>Evidence</h3>
+          <p>Every mismatch ships with the expected fee, the charged fee, the delta, and the exact contract clause it violates — no black-box output.</p>
+          <span class="step-role">Output: audit trail</span>
         </div>
       </div>
     </div>
   </section>
 
-  <footer>
-    <span>Fee Leakage Detector • deterministic fee engine • NVIDIA NIM inference</span>
-    <span>MIT License</span>
-  </footer>
+  <!-- DETECTED LEAKAGE -->
+  <section data-aos="fade-up">
+    <div class="section-label">Example Finding</div>
+    <table class="findings-table">
+      <thead>
+        <tr>
+          <th style="width: 30%;">ISSUE</th>
+          <th style="width: 20%;">SEVERITY</th>
+          <th style="width: 20%;">TRANSACTIONS</th>
+          <th style="width: 30%;">LEAKAGE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="font-weight: 700;">WRONG_TIER_APPLIED</td>
+          <td>HIGH</td>
+          <td>21</td>
+          <td class="leakage-amt">₹831.87</td>
+        </tr>
+        <tr>
+          <td colspan="4" style="color: var(--muted); padding-top: 0; padding-bottom: 24px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 12px; background: var(--surface); padding: 16px; border: 1px solid var(--border);">
+              <div>
+                <div style="margin-bottom: 4px;">Expected fee: <span style="color: var(--text);">₹4,200.00</span></div>
+                <div style="margin-bottom: 4px;">Charged fee: <span style="color: var(--text);">₹5,031.87</span></div>
+                <div>Difference: <span class="leakage-amt">₹831.87</span></div>
+              </div>
+              <div>
+                <div style="margin-bottom: 4px;">Contract clause:</div>
+                <div style="color: var(--text);">"Volume Tier 3 (₹50L - ₹1Cr)"</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- METRICS -->
+  <section data-aos="fade-up">
+    <div class="section-label">Evaluation Metrics</div>
+    <div class="metrics-row">
+      <div>
+        <div class="metric-val" id="m-precision" data-target="95">0%</div>
+        <div class="metric-lbl">Precision</div>
+      </div>
+      <div>
+        <div class="metric-val" id="m-recovery" data-target="70">0%</div>
+        <div class="metric-lbl">Recovery rate</div>
+      </div>
+      <div>
+        <div class="metric-val" id="m-citation" data-target="95">0%</div>
+        <div class="metric-lbl">Citation accuracy</div>
+      </div>
+    </div>
+    <div class="tech-note" style="text-align: left; margin-top: 12px;">Evaluated against synthetic ground-truth with transaction-level labels.</div>
+  </section>
+
+  <!-- CLOSING / REPO -->
+  <section class="closing" data-aos="fade-up">
+    <div class="section-label">Source</div>
+    <a class="repo-link" href="https://github.com/ManyaJain111/feerecon-razorpay-buildathon/" target="_blank" rel="noopener">
+      github.com/ManyaJain111/feerecon-razorpay-buildathon
+      <span class="repo-arrow">&rarr;</span>
+    </a>
+    <div class="credit">Built by <strong>Manya Jain</strong> &middot; IIIT Hyderabad</div>
+  </section>
+
+</main>
+
+<footer>
+  <span>FeeRecon &middot; Deterministic fee reconciliation</span>
+  <span style="color: #9ca3af;">MIT License</span>
+</footer>
+
+<script>
+  // Scroll-triggered reveal animations
+  AOS.init({
+    duration: 600,
+    easing: 'ease-out-cubic',
+    once: true,
+    offset: 60
+  });
+
+  // Count-up animation for the metrics row, triggered when it enters view
+  document.addEventListener('DOMContentLoaded', function () {
+    var counters = document.querySelectorAll('.metric-val[data-target]');
+    if (!counters.length) return;
+
+    function animateCounter(el) {
+      var target = parseInt(el.getAttribute('data-target'), 10) || 0;
+      var duration = 900;
+      var start = null;
+
+      function step(timestamp) {
+        if (start === null) start = timestamp;
+        var progress = Math.min((timestamp - start) / duration, 1);
+        var eased = 1 - Math.pow(1 - progress, 3); // ease-out-cubic
+        el.textContent = Math.round(eased * target) + '%';
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          el.textContent = target + '%';
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
+    if ('IntersectionObserver' in window) {
+      var observer = new IntersectionObserver(function (entries, obs) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            animateCounter(entry.target);
+            obs.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.5 });
+
+      counters.forEach(function (c) { observer.observe(c); });
+    } else {
+      counters.forEach(function (c) { animateCounter(c); });
+    }
+  });
+</script>
+
 </body>
 </html>

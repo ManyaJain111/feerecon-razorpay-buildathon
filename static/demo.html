@@ -46,23 +46,15 @@ main{max-width:1200px;margin:0 auto;padding:24px}
 .btn-primary:hover{background:var(--accent-light);border-color:var(--accent-light)}
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px}
 .panel-title{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);margin-bottom:12px;font-weight:600}
-.companies-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
-.company-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;transition:border-color .15s,box-shadow .15s}
+.companies-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.company-card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px;transition:border-color .15s,box-shadow .15s}
 .company-card:hover{border-color:var(--accent);box-shadow:0 4px 12px rgba(0,0,0,0.06)}
-.company-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
-.company-badge{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--accent);background:#eef2ff;padding:2px 8px;border-radius:4px}
-.company-category{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600}
-.company-name{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px}
-.company-desc{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5}
-.company-meta{display:flex;gap:12px;font-size:11px;color:var(--muted);margin-bottom:16px;padding-top:12px;border-top:1px solid var(--border)}
-.company-meta span{display:flex;align-items:center;gap:4px}
-.company-meta strong{color:var(--text);font-weight:600}
-.company-actions{display:flex;gap:8px}
-.company-actions .btn{flex:1;justify-content:center}
-.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
-.stat-item{text-align:center}
-.stat-value{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text)}
-.stat-label{font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-top:2px}
+.company-tag{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--accent);background:#eef2ff;padding:2px 8px;border-radius:4px;margin-bottom:8px}
+.company-name{font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px}
+.company-category{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:500;margin-bottom:12px}
+.company-metric{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text);margin-bottom:2px}
+.company-metric-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px}
+.company-action{width:100%;justify-content:center}
 .loading{text-align:center;padding:32px;color:var(--muted)}
 .spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -148,38 +140,16 @@ async function loadCompanies(){
     const grid = document.getElementById('companies-grid');
     grid.innerHTML = data.samples.map(s=>`
       <div class="company-card">
-        <div class="company-card-header">
-          <span class="company-badge">${s.filename}</span>
-          <span class="company-category">${s.category}</span>
-        </div>
+        <span class="company-tag">${s.filename}</span>
         <div class="company-name">${s.title}</div>
-        <div class="company-desc">${s.description}</div>
-        <div class="company-meta">
-          <span><strong>Contract:</strong> ${s.filename}</span>
-          <span><strong>Statement:</strong> ${s.sample_statement_path.split('/').pop()}</span>
-        </div>
-        <div class="stat-row">
-          <div class="stat-item">
-            <div class="stat-value" id="txn-count-${s.id}">—</div>
-            <div class="stat-label">Transactions</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value" id="gmv-${s.id}">—</div>
-            <div class="stat-label">GMV</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value" id="leakage-${s.id}">—</div>
-            <div class="stat-label">Est. Leakage</div>
-          </div>
-        </div>
-        <div class="company-actions">
-          <button class="btn btn-primary" onclick="runReconciliation('${s.id}')">Run Reconciliation</button>
-          <a href="demo-run.html?sample=${s.id}" class="btn">View Details</a>
-        </div>
+        <div class="company-category">${s.category}</div>
+        <div class="company-metric" id="gmv-${s.id}">—</div>
+        <div class="company-metric-label">GMV</div>
+        <button class="btn btn-primary company-action" onclick="runReconciliation('${s.id}')">Run Reconciliation</button>
       </div>
     `).join('');
     
-    // Fetch summary stats for each company
+    // Fetch GMV for each company
     for(const s of data.samples){
       try{
         const res = await fetch(apiUrl('/api/load-sample'),{
@@ -188,9 +158,7 @@ async function loadCompanies(){
         });
         const data = await res.json();
         if(data.summary){
-          document.getElementById(`txn-count-${s.id}`).textContent = data.summary.total_records || '—';
           document.getElementById(`gmv-${s.id}`).textContent = '₹' + (data.summary.total_gmv||0).toLocaleString('en-IN');
-          document.getElementById(`leakage-${s.id}`).textContent = '₹' + (data.summary.total_leakage||0).toLocaleString('en-IN',{minimumFractionDigits:0});
         }
       }catch(e){
         console.warn('Preview failed for', s.id, e);
