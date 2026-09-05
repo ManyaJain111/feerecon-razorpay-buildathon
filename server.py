@@ -737,6 +737,11 @@ def create_app():
                 return f.read()
         return "<html><body><h1>Payment Fee Reconciliation API</h1><p>API is running. Access <a href='/docs'>/docs</a> for Swagger UI.</p></body></html>"
 
+    @app.get("/welcome.html", response_class=HTMLResponse)
+    def welcome_html_redirect():
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/welcome")
+
     @app.get("/demo.html", response_class=HTMLResponse)
     def demo_page():
         demo_file = STATIC_DIR / "demo.html"
@@ -799,83 +804,7 @@ def create_app():
             f.write(contents)
         return run_reconciliation(temp_path, batch_id=f"UPLOAD_{file.filename}")
 
-    @app.post("/api/validate-upload")
-    async def validate_upload(contract: UploadFile = File(...), statement: UploadFile = File(...)):
-        """Validate company name match between contract and statement PDF/CSV."""
-        import tempfile
-        from difflib import SequenceMatcher
-        
-        contract_contents = await contract.read()
-        statement_contents = await statement.read()
-        
-        # Save temp files
-        with tempfile.NamedTemporaryFile(suffix=".pdf", dir="reports", delete=False) as tmp:
-            tmp.write(contract_contents)
-            contract_path = tmp.name
-        
-        stmt_ext = ".pdf" if statement.filename.lower().endswith(".pdf") else ".csv"
-        with tempfile.NamedTemporaryFile(suffix=stmt_ext, dir="reports", delete=False) as tmp:
-            tmp.write(statement_contents)
-            statement_path = tmp.name
-        
-        try:
-            # Extract text
-            contract_text = extract_text_from_pdf(contract_path)
-            
-            if statement.filename.lower().endswith(".pdf"):
-                statement_text = extract_text_from_pdf(statement_path)
-            else:
-                statement_text = statement_contents.decode("utf-8", errors="ignore")
-            
-            # Extract company names
-            import re
-            def extract_company(text):
-                patterns = [
-                    r'(?:Merchant|Company|Entity|Client)[:\s]+([^\n\r]+)',
-                    r'(?:Agreement|Contract)\s+(?:with|between)\s+([^\n\r]+)',
-                    r'([A-Z][A-Za-z0-9\s&.,]+(?:Inc|LLC|Ltd|Pvt|Corp|Corporation|Company|Services|Systems|Technologies|Solutions))',
-                ]
-                for pat in patterns:
-                    matches = re.findall(pat, text, re.IGNORECASE)
-                    if matches:
-                        return matches[0].strip()
-                words = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}\b', text)
-                if words:
-                    return words[0]
-                return "Unknown"
-            
-            contract_company = extract_company(contract_text)
-            statement_company = extract_company(statement_text)
-            match_score = SequenceMatcher(None, contract_company.lower(), statement_company.lower()).ratio()
-            
-            checks = [
-                {"label": "Contract Company", "value": contract_company, "pass": True},
-                {"label": "Statement Company", "value": statement_company, "pass": True},
-                {"label": "Name Match Score", "value": f"{match_score*100:.0f}%", "pass": match_score >= 0.85, "warn": 0.6 <= match_score < 0.85},
-                {"label": "Contract Readable", "value": "Yes" if len(contract_text) > 100 else "No", "pass": len(contract_text) > 100},
-                {"label": "Statement Has Data", "value": "Yes" if len(statement_text) > 50 else "No", "pass": len(statement_text) > 50},
-            ]
-            
-            warnings = []
-            if match_score < 0.85:
-                warnings.append(f'Company name mismatch: "{contract_company}" vs "{statement_company}" ({match_score*100:.0f}% match)')
-            if len(contract_text) < 100:
-                warnings.append("Contract PDF appears empty or unreadable")
-            if len(statement_text) < 50:
-                warnings.append("Statement appears empty or unreadable")
-            
-            return {
-                "contract_company": contract_company,
-                "statement_company": statement_company,
-                "match_score": match_score,
-                "warnings": warnings,
-                "checks": checks
-            }
-        finally:
-            try: os.unlink(contract_path)
-            except: pass
-            try: os.unlink(statement_path)
-            except: pass
+    
 
     @app.post("/api/process-upload")
     async def process_upload(contract: UploadFile = File(...), statement: UploadFile = File(...)):

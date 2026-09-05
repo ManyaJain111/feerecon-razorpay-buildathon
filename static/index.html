@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'loose'});</script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({startOnLoad:true,theme:'base',fontFamily:'Inter'});</script>
 <style>
 :root{
   --bg:#fafafa;
@@ -49,20 +49,14 @@ main{max-width:1200px;margin:0 auto;padding:24px}
 .audit-panel .label{color:var(--muted)}
 .audit-panel .value{font-weight:600}
 .audit-panel .big{font-size:22px;font-weight:700;color:var(--accent)}
-.breakdown-table{width:100%;border-collapse:collapse;font-size:12px}
-.breakdown-table th,.breakdown-table td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)}
-.breakdown-table th{font-weight:600;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:0.5px}
-.breakdown-table td.amount{font-family:var(--mono);font-weight:600;text-align:right}
-.breakdown-table .bar{height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden}
-.breakdown-table .bar-inner{height:100%;background:#111827}
-.evidence-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:24px}
-.evidence-card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px}
-.evidence-card h3{font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);margin-bottom:8px}
-.evidence-card .mono{font-family:var(--mono);font-size:14px;font-weight:600}
 .chain{display:flex;gap:8px;flex-wrap:wrap;margin-top:24px}
 .chain-step{flex:1;min-width:140px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px}
 .chain-step .step-name{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);font-weight:600;margin-bottom:4px}
 .chain-step .step-desc{font-size:12px;color:var(--text)}
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.metric-card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px}
+.metric-card .metric-name{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);margin-bottom:4px}
+.metric-card .metric-value{font-family:var(--mono);font-size:14px;font-weight:600}
 footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 </style>
 </head>
@@ -98,76 +92,20 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);font-
     <div class="hero-right">
       <div class="panel audit-panel" id="metrics-panel">
         <div class="panel-title">Quality & Recovery Metrics</div>
-        <div class="audit-panel" style="font-size:12px;line-height:1.7">
-          <div style="font-weight:600;margin-bottom:4px">Detection Quality</div>
-          <div><span class="label">Precision (overall)</span> <span class="value" id="m-precision">—</span></div>
-          <div><span class="label">Recall (overall)</span> <span class="value" id="m-recall">—</span></div>
-          <div><span class="label">Precision@5 / @10 / @20 / @50</span> <span class="value" id="m-prec-k">—</span></div>
-          <div><span class="label">Recall@5 / @10 / @20 / @50</span> <span class="value" id="m-rec-k">—</span></div>
-          <div><span class="label">Exception rate</span> <span class="value" id="m-exc-rate">—</span></div>
-
-          <div style="margin-top:10px;font-weight:600">Recovery</div>
-          <div><span class="label">Overall recovery rate</span> <span class="value" id="m-recovery">—</span></div>
-          <div><span class="label">By leak type</span> <span class="value" id="m-recovery-type">—</span></div>
-
-          <div style="margin-top:10px;font-weight:600">Compliant Escalation</div>
-          <div><span class="label">Escalation adherence</span> <span class="value" id="m-escalation">—</span></div>
-          <div><span class="label">Citation accuracy</span> <span class="value" id="m-citation">—</span></div>
-
-          <div style="margin-top:10px;font-weight:600">Stopping Rules</div>
-          <div><span class="label">Actions within bounds</span> <span class="value" id="m-bounds">—</span></div>
-          <div><span class="label">Kill‑switch trigger rate</span> <span class="value" id="m-kill">—</span></div>
-
-          <div style="margin-top:10px;font-weight:600">Audit Trail</div>
-          <div><span class="label">Manifest completeness</span> <span class="value" id="m-manifest">—</span></div>
+        <div class="metrics-grid">
+          <div class="metric-card"><div class="metric-name">Precision (overall)</div><div class="metric-value" id="m-precision">—</div></div>
+          <div class="metric-card"><div class="metric-name">Recall (overall)</div><div class="metric-value" id="m-recall">—</div></div>
+          <div class="metric-card"><div class="metric-name">Precision@5 / @10 / @20 / @50</div><div class="metric-value" id="m-prec-k">—</div></div>
+          <div class="metric-card"><div class="metric-name">Recall@5 / @10 / @20 / @50</div><div class="metric-value" id="m-rec-k">—</div></div>
+          <div class="metric-card"><div class="metric-name">Exception rate</div><div class="metric-value" id="m-exc-rate">—</div></div>
+          <div class="metric-card"><div class="metric-name">Overall recovery rate</div><div class="metric-value" id="m-recovery">—</div></div>
+          <div class="metric-card"><div class="metric-name">By leak type</div><div class="metric-value" id="m-recovery-type">—</div></div>
+          <div class="metric-card"><div class="metric-name">Escalation adherence</div><div class="metric-value" id="m-escalation">—</div></div>
+          <div class="metric-card"><div class="metric-name">Citation accuracy</div><div class="metric-value" id="m-citation">—</div></div>
+          <div class="metric-card"><div class="metric-name">Actions within bounds</div><div class="metric-value" id="m-bounds">—</div></div>
+          <div class="metric-card"><div class="metric-name">Kill‑switch trigger rate</div><div class="metric-value" id="m-kill">—</div></div>
+          <div class="metric-card"><div class="metric-name">Manifest completeness</div><div class="metric-value" id="m-manifest">—</div></div>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <div class="panel-title">Leakage breakdown</div>
-    <p style="color:var(--muted);margin:8px 0 16px">The audit does not stop at “anomaly detected”. It identifies the contract rule responsible.</p>
-    <table class="breakdown-table">
-      <thead>
-        <tr><th>Issue</th><th>Transactions</th><th class="amount">Leakage</th><th style="width:180px">Impact</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>WRONG_TIER_APPLIED</td><td>7</td><td class="amount">₹277.29</td><td><div class="bar"><div class="bar-inner" style="width:48%"></div></div></td></tr>
-        <tr><td>CAP_VIOLATION</td><td>2</td><td class="amount">₹175.82</td><td><div class="bar"><div class="bar-inner" style="width:30%"></div></div></td></tr>
-        <tr><td>INTL_RATE_SURCHARGE_OVERCHARGE</td><td>2</td><td class="amount">₹80.83</td><td><div class="bar"><div class="bar-inner" style="width:14%"></div></div></td></tr>
-        <tr><td>FEE_OVERCHARGE</td><td>1</td><td class="amount">₹35.40</td><td><div class="bar"><div class="bar-inner" style="width:6%"></div></div></td></tr>
-        <tr><td>UPI_NON_ZERO_MDR</td><td>2</td><td class="amount">₹3.84</td><td><div class="bar"><div class="bar-inner" style="width:1%"></div></div></td></tr>
-        <tr><td>WALLET_OVERCHARGE</td><td>1</td><td class="amount">₹2.83</td><td><div class="bar"><div class="bar-inner" style="width:0.5%"></div></div></td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section class="evidence-grid">
-    <div class="evidence-card">
-      <h3>Exception — instant settlement</h3>
-      <div class="mono">TXN_INSTANT_0003</div>
-      <div style="margin-top:4px;color:var(--muted);font-size:12px">DOMESTIC_CARD • ₹20,000.00</div>
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">CONTRACT RULE</div>
-        <div style="margin-top:4px">Clause 3.1.b — Instant settlement with risk rating <strong>SPECIAL_REVIEW</strong> requires manual offline authorization.</div>
-        <div style="margin-top:8px;font-size:11px;color:#b45309;font-weight:600">RESULT • EXCEPTION</div>
-      </div>
-    </div>
-    <div class="evidence-card">
-      <h3>Leak — wrong tier applied</h3>
-      <div class="mono">TXN_00421</div>
-      <div style="margin-top:4px;color:var(--muted);font-size:12px">DOMESTIC_CARD • ₹20,000.00</div>
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">GATEWAY CHARGED</div>
-        <div class="mono" style="margin-top:2px">₹590.00</div>
-        <div style="margin-top:8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">CONTRACT ALLOWS</div>
-        <div class="mono" style="margin-top:2px">₹312.71</div>
-        <div style="margin-top:8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">DELTA</div>
-        <div class="mono" style="margin-top:2px;color:#b91c1c">+₹277.29</div>
-        <div style="margin-top:8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">RULE</div>
-        <div style="margin-top:2px;font-size:12px">Domestic card • Volume tier ₹10k–₹25k • Contract MDR 1.45% • Clause 3.2.a</div>
-        <div style="margin-top:8px;font-size:11px;color:#b91c1c;font-weight:600">VERDICT • WRONG_TIER_APPLIED</div>
       </div>
     </div>
   </section>
@@ -187,18 +125,30 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);font-
   <section style="margin-top:32px">
     <div class="panel-title">Architecture</div>
     <div class="panel">
-      <div class="mermaid">flowchart TD
-Contract[Contract (PDF/Markdown)] --> LLM[LLM Rule Extractor]
-LLM --> Registry[Versioned Rules Registry]
-Registry --> Adapters[Gateway Adapters<br/>(Razorpay/Stripe/PayU/Custom)]
-Registry --> Engine[Deterministic Fee Engine]
-Engine --> Classifier[Transaction Classifier]
-Classifier --> AuditStore[(SQLite Audit Store)]
-Classifier --> DisputeGen[Dispute Generator]
-Classifier --> Trend[Trend Analyzer]
-AuditStore --> Report[Financial Audit Report & Web UI]
-DisputeGen --> Report
-Trend --> Report</div>
+      <div class="mermaid">
+flowchart TD
+    A["Payment Contract<br/>(PDF/Markdown)"] --> B["LLM Rule Extractor"]
+    B --> C["Rules Registry<br/>(versioned, time-effective)"]
+
+    C --> D["Gateway Adapters<br/>Razorpay / Stripe / PayU"]
+    D --> E["Fee Engine<br/>tiers, caps, GST, refunds"]
+    C --> E
+
+    E --> F["Transaction Classifier<br/>MATCH / LEAK / EXCEPTION"]
+
+    C --> G["Audit Store (SQLite)<br/>idempotency + dispute tracking"]
+    G --> H["Dispute Generator<br/>auto-cites contract clauses"]
+    H --> I["Trend Analyzer<br/>recurring leak patterns"]
+
+    F --> J["Immutable Run Manifest<br/>git SHA + timestamp"]
+    I --> J
+
+    J --> K["Audit Report & Web UI"]
+      </div>
+      <p style="margin-top:12px;font-size:11px;color:var(--muted)">
+        <strong>Core principle:</strong> LLM used only for contract comprehension (rule extraction). 
+        All fee arithmetic runs in a pure deterministic engine — zero LLM in the financial calculation loop.
+      </p>
     </div>
   </section>
 
@@ -213,7 +163,7 @@ Trend --> Report</div>
     </div>
   </section>
 
-<footer>
+  <footer>
     <span>FeeRecon • deterministic fee engine • NVIDIA NIM inference</span>
     <span>MIT License</span>
   </footer>
