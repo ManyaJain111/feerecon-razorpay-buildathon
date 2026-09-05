@@ -21,49 +21,27 @@ Enterprises processing high transaction volumes negotiate custom pricing contrac
 
 An end-to-end reconciliation pipeline that uses an LLM **strictly for contract comprehension**, followed by a pure **deterministic calculation engine** that recomputes expected fees at **6,600+ transactions/second** with **zero arithmetic error**.
 
-```
-Contract (PDF/Markdown)
-       │
-       ▼
-┌──────────────────┐     ┌────────────────────────────────────┐
-│ LLM Rule         │────▶│ Versioned Rules Registry           │
-│ Extractor        │     │ (time-effective rulesets)          │
-└──────────────────┘     └──────────────┬─────────────────────┘
-                                        │
-         ┌──────────────────────────────┼──────────────────────────────┐
-         ▼                              ▼                              ▼
-┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
-│ Gateway Adapters    │    │ Deterministic Fee   │    │ SQLite Audit Store  │
-│ (Razorpay/Stripe/   │    │ Engine              │    │ - Idempotency keys  │
-│  PayU/Custom)       │    │ - Parallel batches  │    │ - Dispute tracking  │
-│ - parse_contract()  │    │ - Volume tiers      │    │ - Recovery KPIs     │
-│ - parse_settlement()│    │ - Cap enforcement   │    └──────────┬──────────┘
-│ - normalize_pm()    │    │ - Refund waivers    │               │
-└─────────────────────┘    │ - GST calculation   │               ▼
-         │                 └─────────────────────┘    ┌─────────────────────┐
-         │                              │             │ Dispute Generator   │
-         └──────────────────────────────┼────────────▶│ - Contract citations│
-                                        │             │ - Itemized schedule │
-                                        ▼             │ - Markdown draft    │
-                           ┌─────────────────────┐    └─────────────────────┘
-                           │ Transaction         │               │
-                           │ Classifier          │               ▼
-                           │ (MATCH/LEAK/        │    ┌─────────────────────┐
-                           │  EXCEPTION/UNDER)   │    │ Trend Analyzer      │
-                           │ - Severity tiers    │    │ - Recurring patterns│
-                           │ - Confidence scores │    │ - Actionable alerts │
-                           └─────────────────────┘    └─────────────────────┘
-                                        │
-                                        ▼
-                           ┌─────────────────────────────────────┐
-                           │ Run Manifest (Immutable)            │
-                           │ Git commit | File SHA256 | Timestamp│
-                           └─────────────────────────────────────┘
-                                        │
-                                        ▼
-                           ┌─────────────────────────────────────┐
-                           │ Financial Audit Report & Web UI     │
-                           └─────────────────────────────────────┘
+```mermaid
+flowchart TD
+    A[Contract (PDF/Markdown)] --> B[LLM Rule Extractor]
+    B -->|confidence per rule + needs_review flags| C[Versioned Rules Registry]
+    C -->|effective_from / effective_to windows<br/>status: verified \| unverified (conf<0.8)| D
+    
+    C --> D[Gateway Adapters<br/>Razorpay/Stripe/PayU/Custom<br/>parse_contract()<br/>parse_settlement()<br/>normalize_pm()]
+    C --> E[Deterministic Fee Engine<br/>Parallel batches<br/>Volume tiers<br/>Cap enforcement<br/>Refund waivers<br/>GST calculation]
+    C --> F[SQLite Audit Store (WAL)<br/>Single-writer by design<br/>Idempotency keys<br/>Dispute tracking + outcome: pending/accepted/rejected<br/>Recovery KPIs]
+    
+    D --> G[Transaction Classifier<br/>MATCH/LEAK/EXCEPTION/UNDERCHARGE<br/>Severity tiers<br/>match_confidence (not fee-arithmetic confidence)]
+    E --> G
+    F --> G
+    
+    G --> H[Dispute Generator<br/>Contract citations<br/>Itemized schedule<br/>Markdown draft]
+    
+    H --> I[Run Manifest (Immutable)<br/>Git commit \| contract_sha256 \| settlement_sha256 \| Timestamp]
+    
+    I --> J[Trend Analyzer<br/>Recurring patterns<br/>Actionable alerts]
+    
+    J --> K[Financial Audit Report & Web UI]
 ```
 
 ---
