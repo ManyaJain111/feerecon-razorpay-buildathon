@@ -20,7 +20,7 @@
   --border: #e5e7eb;
   --text: #111827;
   --muted: #6b7280;
-  --leakage: #dc2626; 
+  --leakage: #dc2626;
   --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
   --sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
@@ -196,7 +196,7 @@ footer { border-top: 1px solid var(--border); padding: 24px; display: flex; just
     <span class="eyebrow">Payment Fee Reconciliation</span>
     <h1>Your payment gateway can charge the wrong fee. Find it.</h1>
     <p>Upload the contract and settlement statement. We recompute every transaction and show where the numbers disagree.</p>
-    
+
     <div class="tech-spec">
       Contract PDF + Settlement CSV &rarr; versioned rules &rarr; deterministic fee engine
     </div>
@@ -215,7 +215,7 @@ footer { border-top: 1px solid var(--border); padding: 24px; display: flex; just
       <div class="output-body">
         <div class="output-stat">83 transactions checked</div>
         <div class="output-stat leakage-amt" style="font-size: 14px;">₹831.87 leakage detected</div>
-        
+
         <table class="output-table">
           <tr>
             <th>VIOLATION</th>
@@ -234,7 +234,7 @@ footer { border-top: 1px solid var(--border); padding: 24px; display: flex; just
             <td style="text-align: right;" class="leakage-amt">₹102.40</td>
           </tr>
         </table>
-        
+
         <div style="margin-top: 24px;">
           <a href="demo.html" style="color: var(--text); text-decoration: underline;">[ Open audit details ]</a>
         </div>
@@ -269,7 +269,7 @@ footer { border-top: 1px solid var(--border); padding: 24px; display: flex; just
           <h3>Multi-Model Extraction</h3>
           <p>A single hallucinated tier silently corrupts all downstream math. We run a 3-pass extraction using <strong>Claude 3.5 Sonnet</strong>, <strong>OpenAI</strong>, and <strong>NVIDIA Nemotron</strong>.</p>
           <p>If the models disagree during self-consistency checks, the rule's <code style="font-family: var(--mono); background: var(--surface); padding: 2px 4px;">confidence</code> score drops below our threshold and is flagged for review. If they align, we output a strict JSON schema that maps rules directly to source text:</p>
-          
+
           <div class="code-window">
             <pre><code><span style="color:#d4d4d4;">{</span>
             <span style="color:#9cdcfe;">"DOMESTIC_CARD"</span><span style="color:#d4d4d4;">: {</span>
@@ -284,7 +284,7 @@ footer { border-top: 1px solid var(--border); padding: 24px; display: flex; just
             <span style="color:#d4d4d4;">}</span>
           <span style="color:#d4d4d4;">}</span></code></pre>
           </div>
-          
+
           <span class="step-role">LLM: Claude / OpenAI / Nemotron</span>
         </div>
       </div>
@@ -374,14 +374,12 @@ footer { border-top: 1px solid var(--border); padding: 24px; display: flex; just
       github.com/ManyaJain111/feerecon-razorpay-buildathon
       <span class="repo-arrow">&rarr;</span>
     </a>
-    <div class="credit">Built by <strong>Manya Jain</strong> &middot; IIIT Hyderabad</div>
   </section>
 
 </main>
 
 <footer>
-  <div class="footer-left">FeeRecon &middot; Deterministic fee reconciliation &middot; <a href="LICENSE" style="color:inherit">MIT License</a></div>
-  <div class="footer-right">Made by Manya Jain</div>
+  <div class="footer-left">Made by Manya Jain, IIIT Hyderabad</div>
 </footer>
 
 <script>
