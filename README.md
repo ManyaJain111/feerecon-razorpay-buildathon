@@ -1,8 +1,23 @@
 # Razorpay Fee Leakage Detector
 
+**Razorpay Buildathon Submission · Track 03: AI Revenue Recovery**
+
+**Manya Jain · IIIT Hyderabad**
+
 Reconciles gateway settlement data against a merchant's actual pricing contract and flags where the gateway charged more (or less) than the contract allows.
 
+### Live Demo
+
+**[Open the deployed application](https://razorpay-api-manya-e7a2f7e8ddefhegq.centralindia-01.azurewebsites.net/)**
+
 ---
+
+## What it does
+
+Upload a merchant's **pricing contract** and **settlement statement**. The system extracts the applicable fee rules, recalculates expected fees deterministically, and flags discrepancies that indicate potential revenue leakage.
+
+**LLM for contract understanding. Deterministic code for money.** 
+
 
 ![](static/image.png)
 

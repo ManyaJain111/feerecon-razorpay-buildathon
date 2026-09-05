@@ -6,7 +6,7 @@
 <title>FeeRecon — Payment Fee Reconciliation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Great+Vibes&display=swap" rel="stylesheet">
 <!-- Mermaid retained for backend/other pages -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({startOnLoad:true,theme:'base',fontFamily:'Inter'});</script>
@@ -111,8 +111,22 @@ section { margin-bottom: 64px; }
 }
 .step-content { flex: 1; padding-bottom: 4px; }
 .step-content h3 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 8px; }
-.step-content p { font-size: 14.5px; color: var(--muted); max-width: 460px; line-height: 1.6; margin-bottom: 10px; }
-.step-role { font-family: var(--mono); font-size: 11.5px; color: var(--text); background: var(--surface); border: 1px solid var(--border); display: inline-block; padding: 3px 8px; border-radius: 2px; }
+.step-content p { font-size: 14.5px; color: var(--muted); max-width: 520px; line-height: 1.6; margin-bottom: 12px; }
+.step-role { font-family: var(--mono); font-size: 11.5px; color: var(--text); background: var(--surface); border: 1px solid var(--border); display: inline-block; padding: 4px 8px; border-radius: 2px; margin-top: 8px; }
+
+/* Inline Code Block for Pipeline */
+.code-window {
+  background: #1e1e1e;
+  border-radius: 4px;
+  padding: 16px;
+  margin: 16px 0;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.4;
+  border: 1px solid #333;
+}
+.code-window pre { margin: 0; }
 
 /* Detected Table Section */
 .findings-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; }
@@ -146,17 +160,16 @@ section { margin-bottom: 64px; }
 
 @media (max-width: 560px) {
   .repo-link { font-size: 14px; padding: 14px 18px; word-break: break-all; text-align: left; }
-}
-
-/* Footer */
-footer { border-top: 1px solid var(--border); padding: 24px; display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-family: var(--mono); }
-
-@media (max-width: 560px) {
   .pipeline-steps::before { left: 5px; }
   .pipeline-step { gap: 18px; }
   .step-num { min-width: unset; font-size: 0; }
   .step-num::before { margin-right: 0; }
 }
+
+/* Footer */
+footer { border-top: 1px solid var(--border); padding: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.footer-left { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+.footer-right { font-family: 'Great Vibes', cursive; font-size: 22px; color: var(--accent); font-weight: 400; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -244,36 +257,53 @@ footer { border-top: 1px solid var(--border); padding: 24px; display: flex; just
       <div class="pipeline-step" data-aos="fade-right" data-aos-delay="0">
         <div class="step-num">01</div>
         <div class="step-content">
-          <h3>Contract</h3>
-          <p>Upload the merchant agreement as a PDF. Every clause that touches pricing — tiers, caps, waivers, exceptions — gets pulled out as a candidate rule.</p>
-          <span class="step-role">LLM: contract interpretation</span>
+          <h3>Contract Ingestion</h3>
+          <p>Upload the merchant agreement as a PDF or Markdown. Gateway-specific adapters normalize Razorpay, Stripe, and PayU contract structures so rules are processed uniformly.</p>
+          <span class="step-role">Input: PDF / Settled CSV</span>
         </div>
       </div>
 
       <div class="pipeline-step" data-aos="fade-right" data-aos-delay="120">
         <div class="step-num">02</div>
         <div class="step-content">
-          <h3>Rules</h3>
-          <p>Clauses become versioned, structured rules with a source citation attached to each one — auditable and diffable, not fee logic buried in prose.</p>
-          <span class="step-role">LLM: rule extraction</span>
+          <h3>Multi-Model Extraction</h3>
+          <p>A single hallucinated tier silently corrupts all downstream math. We run a 3-pass extraction using <strong>Claude 3.5 Sonnet</strong>, <strong>OpenAI</strong>, and <strong>NVIDIA Nemotron</strong>.</p>
+          <p>If the models disagree during self-consistency checks, the rule's <code style="font-family: var(--mono); background: var(--surface); padding: 2px 4px;">confidence</code> score drops below our threshold and is flagged for review. If they align, we output a strict JSON schema that maps rules directly to source text:</p>
+          
+          <div class="code-window">
+            <pre><code><span style="color:#d4d4d4;">{</span>
+            <span style="color:#9cdcfe;">"DOMESTIC_CARD"</span><span style="color:#d4d4d4;">: {</span>
+              <span style="color:#9cdcfe;">"pricing"</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"tiered_volume"</span><span style="color:#d4d4d4;">,</span>
+              <span style="color:#9cdcfe;">"volume"</span><span style="color:#d4d4d4;">: {</span>
+                <span style="color:#9cdcfe;">"0–10L"</span><span style="color:#d4d4d4;">: </span><span style="color:#b5cea8;">2.00</span><span style="color:#d4d4d4;">,</span>
+                <span style="color:#9cdcfe;">"10L–50L"</span><span style="color:#d4d4d4;">: </span><span style="color:#b5cea8;">1.75</span>
+              <span style="color:#d4d4d4;">},</span>
+              <span style="color:#9cdcfe;">"currency"</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"INR"</span><span style="color:#d4d4d4;">,</span>
+              <span style="color:#9cdcfe;">"confidence"</span><span style="color:#d4d4d4;">: </span><span style="color:#b5cea8;">97%</span><span style="color:#d4d4d4;">,</span>
+              <span style="color:#9cdcfe;">"status"</span><span style="color:#ce9178;">: "verified"</span>
+            <span style="color:#d4d4d4;">}</span>
+          <span style="color:#d4d4d4;">}</span></code></pre>
+          </div>
+          
+          <span class="step-role">LLM: Claude / OpenAI / Nemotron</span>
         </div>
       </div>
 
       <div class="pipeline-step" data-aos="fade-right" data-aos-delay="240">
         <div class="step-num">03</div>
         <div class="step-content">
-          <h3>Reconcile</h3>
-          <p>Every settled transaction in the CSV is recomputed against the rule set. Fee math runs in code, not the model, so results are deterministic and repeatable.</p>
-          <span class="step-role">Code: fee calculation</span>
+          <h3>Deterministic Engine</h3>
+          <p>Every settled transaction in the CSV is passed to the fee engine. <strong>No LLMs are used for math.</strong> Calculations run sequentially in pure code against versioned rules, ensuring we correctly price old transactions using historical rate windows (effective_from/effective_to).</p>
+          <span class="step-role">Code: Fee Calculation & Rule Versioning</span>
         </div>
       </div>
 
       <div class="pipeline-step" data-aos="fade-right" data-aos-delay="360">
         <div class="step-num">04</div>
         <div class="step-content">
-          <h3>Evidence</h3>
-          <p>Every mismatch ships with the expected fee, the charged fee, the delta, and the exact contract clause it violates — no black-box output.</p>
-          <span class="step-role">Output: audit trail</span>
+          <h3>Audit & Disputes</h3>
+          <p>Transactions are labeled (MATCH, LEAK, EXCEPTION, UNDERCHARGE). Misalignments generate drafted dispute claims citing the explicit source clause and tracking idempotency keys natively in SQLite.</p>
+          <span class="step-role">Output: WAL Audit Store & Run Manifest</span>
         </div>
       </div>
     </div>
@@ -308,7 +338,7 @@ footer { border-top: 1px solid var(--border); padding: 24px; display: flex; just
               </div>
               <div>
                 <div style="margin-bottom: 4px;">Contract clause:</div>
-                <div style="color: var(--text);">"Volume Tier 3 (₹50L - ₹1Cr)"</div>
+                <div style="color: var(--text);">"Volume Tier 3 (₹50L - ₹1Cr) [cl.3.1(b)]"</div>
               </div>
             </div>
           </td>
@@ -350,8 +380,8 @@ footer { border-top: 1px solid var(--border); padding: 24px; display: flex; just
 </main>
 
 <footer>
-  <span>FeeRecon &middot; Deterministic fee reconciliation</span>
-  <span style="color: #9ca3af;">MIT License</span>
+  <div class="footer-left">FeeRecon &middot; Deterministic fee reconciliation &middot; <a href="LICENSE" style="color:inherit">MIT License</a></div>
+  <div class="footer-right">Made by Manya Jain</div>
 </footer>
 
 <script>
