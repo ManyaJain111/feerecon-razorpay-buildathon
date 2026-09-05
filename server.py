@@ -454,6 +454,187 @@ class ReconcileHTTPHandler(BaseHTTPRequestHandler):
                 self._send_response_json({"error": str(e)}, 400)
             return
 
+        if path == "/api/validate-upload":
+            try:
+                # Handle multipart/form-data
+                content_type = self.headers.get("Content-Type", "")
+                contract_file = None
+                statement_file = None
+                
+                if "multipart/form-data" in content_type:
+                    boundary = content_type.split("boundary=")[-1].strip().encode("utf-8")
+                    parts = body_bytes.split(b"--" + boundary)
+                    for part in parts:
+                        if b'name="contract"' in part and b'filename="' in part:
+                            header_part, body_part = part.split(b"\r\n\r\n", 1)
+                            headers_str = header_part.decode("utf-8", errors="ignore")
+                            m = re.search(r'filename="([^"]+)"', headers_str)
+                            if m:
+                                contract_file = {"filename": m.group(1), "content": body_part.rstrip(b"\r\n--").rstrip(b"\r\n")}
+                        elif b'name="statement"' in part and b'filename="' in part:
+                            header_part, body_part = part.split(b"\r\n\r\n", 1)
+                            headers_str = header_part.decode("utf-8", errors="ignore")
+                            m = re.search(r'filename="([^"]+)"', headers_str)
+                            if m:
+                                statement_file = {"filename": m.group(1), "content": body_part.rstrip(b"\r\n--").rstrip(b"\r\n")}
+                
+                if not contract_file or not statement_file:
+                    self._send_response_json({"error": "Both contract and statement files required"}, 400)
+                    return
+                
+                # Extract text from contract PDF
+                import tempfile
+                with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                    tmp.write(contract_file["content"])
+                    tmp_path = tmp.name
+                contract_text = extract_text_from_pdf(tmp_path)
+                os.unlink(tmp_path)
+                
+                # Parse statement
+                statement_text = ""
+                if statement_file["filename"].lower().endswith(".pdf"):
+                    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                        tmp.write(statement_file["content"])
+                        tmp_path = tmp.name
+                    statement_text = extract_text_from_pdf(tmp_path)
+                    os.unlink(tmp_path)
+                else:
+                    statement_text = statement_file["content"].decode("utf-8", errors="ignore")
+                
+                # Extract company names
+                import re
+                def extract_company(text, prefix=""):
+                    # Look for common patterns
+                    patterns = [
+                        r'(?:Merchant|Company|Entity|Client)[:\s]+([^\n\r]+)',
+                        r'(?:Agreement|Contract)\s+(?:with|between)\s+([^\n\r]+)',
+                        r'([A-Z][A-Za-z0-9\s&.,]+(?:Inc|LLC|Ltd|Pvt|Corp|Corporation|Company|Services|Systems|Technologies|Solutions))',
+                    ]
+                    for pat in patterns:
+                        matches = re.findall(pat, text, re.IGNORECASE)
+                        if matches:
+                            return matches[0].strip()
+                    # Fallback: first capitalized phrase
+                    words = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}\b', text)
+                    if words:
+                        return words[0]
+                    return "Unknown"
+                
+                contract_company = extract_company(contract_text)
+                statement_company = extract_company(statement_text)
+                
+                # Calculate similarity
+                from difflib import SequenceMatcher
+                match_score = SequenceMatcher(None, contract_company.lower(), statement_company.lower()).ratio()
+                
+                # Validation checks
+                checks = [
+                    {"label": "Contract Company", "value": contract_company, "pass": True},
+                    {"label": "Statement Company", "value": statement_company, "pass": True},
+                    {"label": "Name Match Score", "value": f"{match_score*100:.0f}%", "pass": match_score >= 0.85, "warn": 0.6 <= match_score < 0.85},
+                    {"label": "Contract Has Pages", "value": "Yes" if len(contract_text) > 100 else "No", "pass": len(contract_text) > 100},
+                    {"label": "Statement Has Records", "value": "Yes" if len(statement_text) > 50 else "No", "pass": len(statement_text) > 50},
+                ]
+                
+                warnings = []
+                if match_score < 0.85:
+                    warnings.append(f'Company name mismatch: "{contract_company}" vs "{statement_company}" ({match_score*100:.0f}% match)')
+                if len(contract_text) < 100:
+                    warnings.append("Contract PDF appears empty or unreadable")
+                if len(statement_text) < 50:
+                    warnings.append("Statement appears empty or unreadable")
+                
+                self._send_response_json({
+                    "contract_company": contract_company,
+                    "statement_company": statement_company,
+                    "match_score": match_score,
+                    "warnings": warnings,
+                    "checks": checks
+                })
+            except Exception as e:
+                self._send_response_json({"error": str(e)}, 400)
+            return
+        
+        if path == "/api/process-upload":
+            try:
+                # Handle multipart/form-data
+                content_type = self.headers.get("Content-Type", "")
+                contract_file = None
+                statement_file = None
+                
+                if "multipart/form-data" in content_type:
+                    boundary = content_type.split("boundary=")[-1].strip().encode("utf-8")
+                    parts = body_bytes.split(b"--" + boundary)
+                    for part in parts:
+                        if b'name="contract"' in part and b'filename="' in part:
+                            header_part, body_part = part.split(b"\r\n\r\n", 1)
+                            headers_str = header_part.decode("utf-8", errors="ignore")
+                            m = re.search(r'filename="([^"]+)"', headers_str)
+                            if m:
+                                contract_file = {"filename": m.group(1), "content": body_part.rstrip(b"\r\n--").rstrip(b"\r\n")}
+                        elif b'name="statement"' in part and b'filename="' in part:
+                            header_part, body_part = part.split(b"\r\n\r\n", 1)
+                            headers_str = header_part.decode("utf-8", errors="ignore")
+                            m = re.search(r'filename="([^"]+)"', headers_str)
+                            if m:
+                                statement_file = {"filename": m.group(1), "content": body_part.rstrip(b"\r\n--").rstrip(b"\r\n")}
+                
+                if not contract_file or not statement_file:
+                    self._send_response_json({"error": "Both contract and statement files required"}, 400)
+                    return
+                
+                # Save temp files
+                import tempfile
+                os.makedirs("reports", exist_ok=True)
+                
+                with tempfile.NamedTemporaryFile(suffix=".pdf", dir="reports", delete=False) as tmp:
+                    tmp.write(contract_file["content"])
+                    contract_path = tmp.name
+                
+                stmt_ext = ".pdf" if statement_file["filename"].lower().endswith(".pdf") else ".csv"
+                with tempfile.NamedTemporaryFile(suffix=stmt_ext, dir="reports", delete=False) as tmp:
+                    tmp.write(statement_file["content"])
+                    statement_path = tmp.name
+                
+                try:
+                    # Extract rules from contract PDF
+                    pdf_text = extract_text_from_pdf(contract_path)
+                    nim_key = get_nim_api_key()
+                    if nim_key:
+                        rules_extracted = extract_rules_from_text(pdf_text, api_key=nim_key)
+                    else:
+                        rules_extracted = extract_rules_from_pdf_text(pdf_text, contract_file["filename"])
+                    
+                    # Process statement
+                    if statement_file["filename"].lower().endswith(".pdf"):
+                        stmt_text = extract_text_from_pdf(statement_path)
+                        records = parse_statement_from_pdf_text(stmt_text, statement_file["filename"])
+                    else:
+                        records = load_settlement_csv(statement_path)
+                    
+                    # Run reconciliation
+                    recon = run_reconciliation(records, rules_override=rules_extracted, batch_id=f"UPLOAD_{contract_file['filename']}")
+                    recon["filename"] = contract_file["filename"]
+                    recon["doc_type"] = "custom"
+                    recon["extracted_text_preview"] = pdf_text[:1500]
+                    recon["llm_provider"] = "nvidia_nim" if nim_key else "offline_parser"
+                    
+                    # Generate dispute draft
+                    draft = generate_dispute_draft(recon["records"], rules_extracted, batch_id=recon.get("batch_id", "CUSTOM"))
+                    recon["dispute_draft"] = draft
+                    
+                    self._send_response_json(recon)
+                finally:
+                    # Cleanup
+                    try: os.unlink(contract_path)
+                    except: pass
+                    try: os.unlink(statement_path)
+                    except: pass
+                    
+            except Exception as e:
+                self._send_response_json({"error": str(e)}, 400)
+            return
+        
         if path in ["/api/upload-settlement", "/api/process-pdf"]:
             try:
                 # Handle multipart/form-data or raw bytes
@@ -546,6 +727,22 @@ def create_app():
                 return f.read()
         return "<html><body><h1>Payment Fee Reconciliation API</h1><p>API is running. Access <a href='/docs'>/docs</a> for Swagger UI.</p></body></html>"
 
+    @app.get("/demo.html", response_class=HTMLResponse)
+    def demo_page():
+        demo_file = STATIC_DIR / "demo.html"
+        if demo_file.exists():
+            with open(demo_file, "r", encoding="utf-8") as f:
+                return f.read()
+        return HTMLResponse("<html><body><h1>Demo page not found</h1></body></html>", status_code=404)
+
+    @app.get("/upload.html", response_class=HTMLResponse)
+    def upload_page():
+        upload_file = STATIC_DIR / "upload.html"
+        if upload_file.exists():
+            with open(upload_file, "r", encoding="utf-8") as f:
+                return f.read()
+        return HTMLResponse("<html><body><h1>Upload page not found</h1></body></html>", status_code=404)
+
     @app.get("/api/reconciliation")
     def get_reconciliation():
         return run_reconciliation(SETTLEMENT_PATH)
@@ -583,6 +780,135 @@ def create_app():
         with open(temp_path, "wb") as f:
             f.write(contents)
         return run_reconciliation(temp_path, batch_id=f"UPLOAD_{file.filename}")
+
+    @app.post("/api/validate-upload")
+    async def validate_upload(contract: UploadFile = File(...), statement: UploadFile = File(...)):
+        """Validate company name match between contract and statement PDF/CSV."""
+        import tempfile
+        from difflib import SequenceMatcher
+        
+        contract_contents = await contract.read()
+        statement_contents = await statement.read()
+        
+        # Save temp files
+        with tempfile.NamedTemporaryFile(suffix=".pdf", dir="reports", delete=False) as tmp:
+            tmp.write(contract_contents)
+            contract_path = tmp.name
+        
+        stmt_ext = ".pdf" if statement.filename.lower().endswith(".pdf") else ".csv"
+        with tempfile.NamedTemporaryFile(suffix=stmt_ext, dir="reports", delete=False) as tmp:
+            tmp.write(statement_contents)
+            statement_path = tmp.name
+        
+        try:
+            # Extract text
+            contract_text = extract_text_from_pdf(contract_path)
+            
+            if statement.filename.lower().endswith(".pdf"):
+                statement_text = extract_text_from_pdf(statement_path)
+            else:
+                statement_text = statement_contents.decode("utf-8", errors="ignore")
+            
+            # Extract company names
+            import re
+            def extract_company(text):
+                patterns = [
+                    r'(?:Merchant|Company|Entity|Client)[:\s]+([^\n\r]+)',
+                    r'(?:Agreement|Contract)\s+(?:with|between)\s+([^\n\r]+)',
+                    r'([A-Z][A-Za-z0-9\s&.,]+(?:Inc|LLC|Ltd|Pvt|Corp|Corporation|Company|Services|Systems|Technologies|Solutions))',
+                ]
+                for pat in patterns:
+                    matches = re.findall(pat, text, re.IGNORECASE)
+                    if matches:
+                        return matches[0].strip()
+                words = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}\b', text)
+                if words:
+                    return words[0]
+                return "Unknown"
+            
+            contract_company = extract_company(contract_text)
+            statement_company = extract_company(statement_text)
+            match_score = SequenceMatcher(None, contract_company.lower(), statement_company.lower()).ratio()
+            
+            checks = [
+                {"label": "Contract Company", "value": contract_company, "pass": True},
+                {"label": "Statement Company", "value": statement_company, "pass": True},
+                {"label": "Name Match Score", "value": f"{match_score*100:.0f}%", "pass": match_score >= 0.85, "warn": 0.6 <= match_score < 0.85},
+                {"label": "Contract Readable", "value": "Yes" if len(contract_text) > 100 else "No", "pass": len(contract_text) > 100},
+                {"label": "Statement Has Data", "value": "Yes" if len(statement_text) > 50 else "No", "pass": len(statement_text) > 50},
+            ]
+            
+            warnings = []
+            if match_score < 0.85:
+                warnings.append(f'Company name mismatch: "{contract_company}" vs "{statement_company}" ({match_score*100:.0f}% match)')
+            if len(contract_text) < 100:
+                warnings.append("Contract PDF appears empty or unreadable")
+            if len(statement_text) < 50:
+                warnings.append("Statement appears empty or unreadable")
+            
+            return {
+                "contract_company": contract_company,
+                "statement_company": statement_company,
+                "match_score": match_score,
+                "warnings": warnings,
+                "checks": checks
+            }
+        finally:
+            try: os.unlink(contract_path)
+            except: pass
+            try: os.unlink(statement_path)
+            except: pass
+
+    @app.post("/api/process-upload")
+    async def process_upload(contract: UploadFile = File(...), statement: UploadFile = File(...)):
+        """Run full pipeline on uploaded contract + statement."""
+        import tempfile
+        
+        contract_contents = await contract.read()
+        statement_contents = await statement.read()
+        
+        with tempfile.NamedTemporaryFile(suffix=".pdf", dir="reports", delete=False) as tmp:
+            tmp.write(contract_contents)
+            contract_path = tmp.name
+        
+        stmt_ext = ".pdf" if statement.filename.lower().endswith(".pdf") else ".csv"
+        with tempfile.NamedTemporaryFile(suffix=stmt_ext, dir="reports", delete=False) as tmp:
+            tmp.write(statement_contents)
+            statement_path = tmp.name
+        
+        try:
+            # Extract rules
+            pdf_text = extract_text_from_pdf(contract_path)
+            nim_key = get_nim_api_key()
+            if nim_key:
+                rules_extracted = extract_rules_from_text(pdf_text, api_key=nim_key)
+            else:
+                rules_extracted = extract_rules_from_pdf_text(pdf_text, contract.filename)
+            
+            # Process statement
+            if statement.filename.lower().endswith(".pdf"):
+                stmt_text = extract_text_from_pdf(statement_path)
+                records = parse_statement_from_pdf_text(stmt_text, statement.filename)
+            else:
+                records = load_settlement_csv(statement_path)
+            
+            # Reconcile
+            recon = run_reconciliation(records, rules_override=rules_extracted, batch_id=f"UPLOAD_{contract.filename}")
+            recon["filename"] = contract.filename
+            recon["doc_type"] = "custom"
+            recon["extracted_text_preview"] = pdf_text[:1500]
+            recon["llm_provider"] = "nvidia_nim" if nim_key else "offline_parser"
+            
+            # Generate dispute draft
+            draft = generate_dispute_draft(recon["records"], rules_extracted, batch_id=recon.get("batch_id", "CUSTOM"))
+            recon["dispute_draft"] = draft
+            
+            return recon
+        finally:
+            try: os.unlink(contract_path)
+            except: pass
+            try: os.unlink(statement_path)
+            except: pass
 
     @app.post("/api/process-pdf")
     async def process_pdf_api(file: UploadFile = File(...)):

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FeeRecon Upload — Custom Contract & Statement</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fafafa;
+  --panel:#ffffff;
+  --border:#e5e7eb;
+  --text:#111827;
+  --muted:#6b7280;
+  --accent:#1f2937;
+  --accent-light:#374151;
+  --danger:#b91c1c;
+  --danger-bg:#fef2f2;
+  --warn:#b45309;
+  --warn-bg:#fffbeb;
+  --success:#15803d;
+  --success-bg:#f0fdf4;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --sans:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+header{display:flex;justify-content:space-between;align-items:center;padding:10px 24px;border-bottom:1px solid var(--border);background:var(--panel);position:sticky;top:0;z-index:10}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-title{font-weight:700;font-size:14px}
+.brand-sub{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+nav{display:flex;gap:6px;align-items:center}
+nav a{padding:5px 10px;border-radius:4px;font-size:11px;font-weight:500;color:var(--muted)}
+nav a:hover{background:#f3f4f6;color:var(--text)}
+nav a.active{background:#e5e7eb;color:var(--text)}
+.meta-right{display:flex;gap:12px;align-items:center;font-size:10px;color:var(--muted)}
+main{max-width:1100px;margin:0 auto;padding:24px}
+.page-header{text-align:center;margin-bottom:24px}
+.page-title{font-size:22px;font-weight:700;margin-bottom:6px}
+.page-sub{font-size:13px;color:var(--muted);max-width:640px;margin:0 auto}
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media (max-width:860px){.upload-grid{grid-template-columns:1fr}}
+.upload-col{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:20px}
+.col-title{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:4px}
+.col-title .icon{width:28px;height:28px;background:#f3f4f6;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.col-title .icon svg{width:16px;height:16px;stroke:var(--accent)}
+.col-desc{font-size:12px;color:var(--muted);margin-bottom:16px}
+.drop-zone{border:2px dashed var(--border);border-radius:6px;padding:28px 16px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:#f9fafb}
+.drop-zone.valid{border-color:var(--success);background:var(--success-bg)}
+.drop-zone.error{border-color:var(--danger);background:var(--danger-bg)}
+.drop-icon{width:40px;height:40px;margin:0 auto 10px;stroke:var(--muted)}
+.drop-title{font-size:13px;font-weight:600;margin-bottom:4px}
+.drop-desc{font-size:11px;color:var(--muted);margin-bottom:10px}
+.drop-formats{font-size:10px;color:var(--muted);display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.format-badge{background:var(--bg);border:1px solid var(--border);padding:2px 8px;border-radius:3px;font-family:var(--mono)}
+.file-input{display:none}
+.file-info{display:none;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;margin-top:12px}
+.file-info.visible{display:block}
+.file-info-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.file-info-title{font-size:12px;font-weight:600}
+.file-info-meta{font-size:10px;color:var(--muted)}
+.file-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px}
+.file-remove:hover{color:var(--danger)}
+.match-alert{display:none;background:var(--warn-bg);border:1px solid #fde68a;border-radius:4px;padding:12px;margin-top:16px;font-size:11px;color:#78350f}
+.match-alert.visible{display:block}
+.match-alert-title{font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.validation-card{display:none;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px;margin-top:16px}
+.validation-card.visible{display:block}
+.validation-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.validation-status{width:10px;height:10px;border-radius:50%}
+.validation-status.success{background:var(--success)}
+.validation-status.warn{background:var(--warn)}
+.validation-status.error{background:var(--danger)}
+.validation-title{font-size:12px;font-weight:600}
+.validation-details{font-size:11px;color:var(--muted)}
+.validation-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.validation-item{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px 10px}
+.validation-item.pass{border-color:#bbf7d0;background:var(--success-bg)}
+.validation-item.warn{border-color:#fde68a;background:var(--warn-bg)}
+.validation-item.fail{border-color:#fecaca;background:var(--danger-bg)}
+.validation-label{font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:2px}
+.validation-value{font-family:var(--mono);font-size:12px;font-weight:600}
+.action-bar{display:flex;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--panel);color:var(--text);transition:background .15s,border-color .15s}
+.btn:hover{background:#f3f4f6}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-light);border-color:var(--accent-light)}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed}
+.btn-danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn-danger:hover{background:#991b1b;border-color:#991b1b}
+.results-section{display:none;margin-top:24px}
+.results-section.visible{display:block}
+.results-tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:4px}
+.tab-btn{padding:8px 14px;border:none;background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;border-radius:4px 4px 0 0;position:relative}
+.tab-btn:hover{color:var(--text);background:#f3f4f6}
+.tab-btn.active{color:var(--accent);background:#eef2ff}
+.tab-btn.active::after{content:'';position:absolute;bottom:-5px;left:0;right:0;height:2px;background:var(--accent)}
+.tab-panel{display:none}
+.tab-panel.visible{display:block}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+@media (max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.kpi-row{grid-template-columns:1fr}}
+.kpi-box{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px 14px}
+.kpi-box.alert{border-color:var(--danger);background:var(--danger-bg)}
+.kpi-title{font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.kpi-box.alert .kpi-title{color:var(--danger)}
+.kpi-val{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text)}
+.kpi-box.alert .kpi-val{color:var(--danger)}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.rules-display{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:16px}
+.rules-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.rule-card{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px}
+.rule-card-title{font-size:11px;font-weight:600;margin-bottom:4px}
+.rule-card-rate{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent);margin-bottom:2px}
+.rule-card-clause{font-size:10px;color:var(--muted)}
+.table-container{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.table-toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--bg)}
+.table-title{font-size:12px;font-weight:600}
+.toolbar-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.filter-group{display:flex;gap:4px}
+.filter-btn{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer}
+.filter-btn.active{background:var(--text);border-color:var(--text);color:#fff}
+.search-input{background:var(--panel);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:4px;font-size:11px;width:220px}
+.search-input:focus{outline:none;border-color:var(--accent)}
+table{width:100%;border-collapse:collapse}
+th{background:var(--bg);padding:10px 12px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px}
+tr:hover{background:#f9fafb}
+tr.selected{background:#eef2ff}
+.status-badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700;font-family:var(--mono)}
+.status-leak{background:var(--danger-bg);color:var(--danger);border:1px solid #fecaca}
+.status-match{background:var(--success-bg);color:var(--success);border:1px solid #bbf7d0}
+.status-exception{background:var(--warn-bg);color:var(--warn);border:1px solid #fde68a}
+.clause-chip{background:#eef2ff;color:var(--accent);font-weight:700;font-size:9px;padding:1px 5px;border-radius:2px;font-family:var(--mono);margin-right:6px}
+.detail-row{background:var(--bg)}
+.detail-drawer{padding:12px 14px;border-top:1px solid var(--border)}
+.detail-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.detail-title{font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent);font-weight:600}
+.detail-delta{font-family:var(--mono);font-weight:700;color:var(--danger)}
+.detail-formula{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:var(--mono);font-size:11px;color:#111827;line-height:1.7}
+.detail-evidence{margin-top:8px;font-size:11px;color:var(--text)}
+.detail-evidence strong{color:var(--accent)}
+.loading-overlay{position:fixed;inset:0;background:rgba(17,24,39,0.7);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.loading-overlay.visible{display:flex}
+.loading-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:14px;font-weight:600;color:#fff}
+.loading-sub{font-size:12px;color:rgba(255,255,255,0.7)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(17,24,39,0.55);backdrop-filter:blur(3px);z-index:1000;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal-dialog{background:var(--panel);border:1px solid var(--border);border-radius:6px;width:100%;max-width:900px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 12px 32px rgba(0,0,0,0.12)}
+.modal-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-title{font-size:13px;font-weight:600}
+.modal-close{background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;padding:2px}
+.modal-body{padding:14px 16px;overflow:auto;font-family:var(--mono);font-size:11px;line-height:1.6;white-space:pre-wrap;background:#f9fafb;color:#374155;max-height:55vh}
+.modal-footer{padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.empty-state{text-align:center;padding:32px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="brand-title">FeeRecon</div>
+    <div class="brand-sub">UPLOAD</div>
+  </div>
+  <nav>
+    <a href="welcome.html">Welcome</a>
+    <a href="demo.html">Demo</a>
+    <a href="upload.html" class="active">Upload</a>
+    <button class="btn" onclick="promptApiUrl()" style="background:none;border:none;padding:5px 8px;cursor:pointer;font-size:11px">
+      <span id="api-badge" style="color:var(--success)">Local</span>
+    </button>
+  </nav>
+</header>
+
+<main>
+  <div class="page-header">
+    <h1 class="page-title">Upload contract & statement</h1>
+    <p class="page-sub">Provide a pricing agreement (PDF) and a settlement report (CSV or PDF). FeeRecon will extract rules, reconcile deterministically, and produce a dispute pack.</p>
+  </div>
+
+  <div class="upload-grid">
+    <section class="upload-col">
+      <div class="col-title"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>Contract (PDF)</div>
+      <p class="col-desc">Merchant pricing agreement. We extract tiered MDR, caps, zero-MDR instruments, conditional waivers, GST clauses.</p>
+      <div class="drop-zone" id="contract-drop" onclick="document.getElementById('contract-file').click()">
+        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div class="drop-title">Drop contract PDF here</div>
+        <div class="drop-desc">or click to browse</div>
+        <div class="drop-formats"><span class="format-badge">.pdf</span><span class="format-badge">Max 10 MB</span></div>
+        <input type="file" id="contract-file" class="file-input" accept=".pdf" onchange="handleContractFile(event)">
+      </div>
+      <div class="file-info" id="contract-info">
+        <div class="file-info-header"><div><div class="file-info-title" id="contract-name">—</div><div class="file-info-meta" id="contract-meta">—</div></div><button class="file-remove" onclick="removeContract()">×</button></div>
+      </div>
+    </section>
+
+    <section class="upload-col">
+      <div class="col-title"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>Settlement (CSV / PDF)</div>
+      <p class="col-desc">Gateway settlement report. Supports Razorpay, Stripe, PayU CSV and PDF statements.</p>
+      <div class="drop-zone" id="statement-drop" onclick="document.getElementById('statement-file').click()">
+        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <div class="drop-title">Drop settlement CSV/PDF here</div>
+        <div class="drop-desc">or click to browse</div>
+        <div class="drop-formats"><span class="format-badge">.csv</span><span class="format-badge">.pdf</span><span class="format-badge">Max 50 MB</span></div>
+        <input type="file" id="statement-file" class="file-input" accept=".csv,.pdf" onchange="handleStatementFile(event)">
+      </div>
+      <div class="file-info" id="statement-info">
+        <div class="file-info-header"><div><div class="file-info-title" id="statement-name">—</div><div class="file-info-meta" id="statement-meta">—</div></div><button class="file-remove" onclick="removeStatement()">×</button></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="match-alert" id="match-alert">
+    <div class="match-alert-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Company name mismatch</div>
+    <div id="match-alert-details"></div>
+  </div>
+
+  <div class="validation-card" id="validation-card">
+    <div class="validation-header">
+      <div class="validation-status" id="validation-status"></div>
+      <div><div class="validation-title" id="validation-title">Validation pending</div><div class="validation-details" id="validation-details">Upload both files to validate company match and structure</div></div>
+    </div>
+    <div class="validation-grid" id="validation-grid"></div>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn" onclick="resetUpload()">Clear</button>
+    <button class="btn btn-primary" id="process-btn" onclick="processFiles()" disabled>
+      <span id="process-btn-text">Run reconciliation</span>
+      <svg id="process-spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-linecap="round"/></svg>
+    </button>
+    <a href="demo.html" class="btn">← Try demo</a>
+  </div>
+
+  <section class="results-section" id="results-section">
+    <div class="results-tabs">
+      <button class="tab-btn active" onclick="showTab('summary')">Summary & rules</button>
+      <button class="tab-btn" onclick="showTab('exceptions')">Exceptions</button>
+      <button class="tab-btn" onclick="showTab('dispute')">Dispute pack</button>
+    </div>
+
+    <div class="tab-panel visible" id="tab-summary">
+      <div class="kpi-row">
+        <div class="kpi-box alert"><div class="kpi-title">Detected leakage</div><div class="kpi-val" id="r-overcharge">₹0.00</div><div class="kpi-sub">Recoverable</div></div>
+        <div class="kpi-box"><div class="kpi-title">Leaks</div><div class="kpi-val" id="r-exceptions" style="color:var(--danger)">0</div><div class="kpi-sub">Flagged</div></div>
+        <div class="kpi-box"><div class="kpi-title">Matched</div><div class="kpi-val" id="r-matched" style="color:var(--success)">0</div><div class="kpi-sub" id="r-match-rate">0.0%</div></div>
+        <div class="kpi-box"><div class="kpi-title">GMV</div><div class="kpi-val" id="r-gmv">₹0.00</div><div class="kpi-sub" id="r-total">0 txns</div></div>
+      </div>
+      <div class="rules-display">
+        <div class="col-title" style="margin-bottom:10px"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>Extracted rate schedule</div>
+        <div class="rules-grid" id="extracted-rules"></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-exceptions">
+      <div class="table-container">
+        <div class="table-toolbar">
+          <div class="table-title">Reconciliation exceptions</div>
+          <div class="toolbar-controls">
+            <div class="filter-group">
+              <button class="filter-btn active" onclick="setResultFilter('LEAK', this)">Leaks (<span id="rf-leak">0</span>)</button>
+              <button class="filter-btn" onclick="setResultFilter('ALL', this)">All (<span id="rf-all">0</span>)</button>
+              <button class="filter-btn" onclick="setResultFilter('MATCH', this)">Matched (<span id="rf-match">0</span>)</button>
+            </div>
+            <input type="text" class="search-input" id="result-search" placeholder="Search…" oninput="renderResultTable()">
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Status</th><th>Transaction</th><th>Method</th><th style="text-align:right">Amount</th><th style="text-align:right">Charged</th><th style="text-align:right">Expected</th><th style="text-align:right">Delta</th><th>Rule / Reason</th></tr>
+          </thead>
+          <tbody id="result-table-body"><tr><td colspan="8" class="empty-state">Run reconciliation to see results</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-dispute">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div><h3 style="font-size:16px;font-weight:600">Dispute claim notice</h3><p style="color:var(--muted);margin-top:4px;font-size:12px">Markdown with clause citations, page refs, itemized schedule</p></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="copyDisputeMD()">Copy markdown</button>
+          <button class="btn btn-primary" onclick="downloadDisputeMD()">Download .md</button>
+          <button class="btn" onclick="downloadDisputeCSV()">Download CSV schedule</button>
+        </div>
+      </div>
+      <div class="modal-body" id="dispute-preview" style="height:420px;border:1px solid var(--border);border-radius:4px;padding:16px;background:#f9fafb"><div class="empty-state">Run reconciliation to generate dispute notice</div></div>
+    </div>
+  </section>
+</main>
+
+<div class="loading-overlay" id="loading-overlay"><div class="loading-spinner"></div><div class="loading-text" id="loading-text">Processing…</div><div class="loading-sub" id="loading-sub">Please wait</div></div>
+
+<div class="modal-overlay" id="dispute-modal" onclick="closeDisputeModal(event)">
+  <div class="modal-dialog" onclick="event.stopPropagation()">
+    <div class="modal-header"><div class="modal-title">Dispute claim (full view)</div><button class="modal-close" onclick="closeDisputeModal()">&times;</button></div>
+    <div class="modal-body" id="dispute-full-content">Loading…</div>
+    <div class="modal-footer"><button class="btn" onclick="copyDisputeMD()">Copy markdown</button><button class="btn btn-primary" onclick="downloadDisputeMD()">Download .md</button></div>
+  </div>
+</div>
+
+<script>
+/* --- identical JS from previous upload.html, unchanged IDs --- */
+let contractFile=null, statementFile=null, contractText='', statementData=null, validationResult=null, reconciliationResult=null;
+let apiBase = localStorage.getItem('API_BASE_URL') || '';
+let currentFilter='LEAK', expandedTxnId=null;
+function apiUrl(endpoint){ if(!apiBase) return endpoint; const base=apiBase.endsWith('/')?apiBase.slice(0,-1):apiBase; const path=endpoint.startsWith('/')?endpoint:'/'+endpoint; return `${base}${path}`; }
+function showLoading(text,sub){ document.getElementById('loading-text').textContent=text; document.getElementById('loading-sub').textContent=sub; document.getElementById('loading-overlay').classList.add('visible'); }
+function hideLoading(){ document.getElementById('loading-overlay').classList.remove('visible'); }
+function updateApiBadge(){ document.getElementById('api-badge').textContent=apiBase?'Remote':'Local'; }
+function promptApiUrl(){ const entered=prompt('Backend API URL (e.g. https://your-backend.onrender.com) or empty for same-origin:',apiBase); if(entered!==null){ apiBase=entered.trim(); if(apiBase) localStorage.setItem('API_BASE_URL',apiBase); else localStorage.removeItem('API_BASE_URL'); updateApiBadge(); } }
+function handleContractFile(e){ const file=e.target.files[0]; if(!file) return; if(!file.name.toLowerCase().endsWith('.pdf')){ alert('Contract must be a PDF'); e.target.value=''; return; } contractFile=file; document.getElementById('contract-name').textContent=file.name; document.getElementById('contract-meta').textContent=`${(file.size/1024/1024).toFixed(2)} MB`; document.getElementById('contract-info').classList.add('visible'); document.getElementById('contract-drop').classList.add('valid'); validateIfReady(); }
+function handleStatementFile(e){ const file=e.target.files[0]; if(!file) return; const ext=file.name.toLowerCase().split('.').pop(); if(!['csv','pdf'].includes(ext)){ alert('Statement must be CSV or PDF'); e.target.value=''; return; } statementFile=file; document.getElementById('statement-name').textContent=file.name; document.getElementById('statement-meta').textContent=`${(file.size/1024/1024).toFixed(2)} MB • ${ext.toUpperCase()}`; document.getElementById('statement-info').classList.add('visible'); document.getElementById('statement-drop').classList.add('valid'); validateIfReady(); }
+function removeContract(){ contractFile=null; document.getElementById('contract-file').value=''; document.getElementById('contract-info').classList.remove('visible'); document.getElementById('contract-drop').classList.remove('valid','error'); resetValidation(); }
+function removeStatement(){ statementFile=null; document.getElementById('statement-file').value=''; document.getElementById('statement-info').classList.remove('visible'); document.getElementById('statement-drop').classList.remove('valid','error'); resetValidation(); }
+function resetValidation(){ validationResult=null; document.getElementById('validation-card').classList.remove('visible'); document.getElementById('match-alert').classList.remove('visible'); document.getElementById('process-btn').disabled=true; }
+function validateIfReady(){ if(!contractFile||!statementFile) return; document.getElementById('validation-card').classList.add('visible'); document.getElementById('validation-title').textContent='Validating company match…'; document.getElementById('validation-status').className='validation-status warn'; document.getElementById('validation-details').textContent='Checking contract vs statement entity names…'; document.getElementById('validation-grid').innerHTML=''; setTimeout(runValidation,500); }
+async function runValidation(){
+  try{
+    const fd=new FormData(); fd.append('contract',contractFile); fd.append('statement',statementFile);
+    const res=await fetch(apiUrl('/api/validate-upload'),{method:'POST',body:fd});
+    const data=await res.json(); validationResult=data; renderValidation(data);
+  }catch(err){ document.getElementById('validation-title').textContent='Validation error'; document.getElementById('validation-status').className='validation-status error'; document.getElementById('validation-details').textContent=err.message; document.getElementById('process-btn').disabled=true; }
+}
+function renderValidation(data){
+  const {contract_company,statement_company,match_score,warnings,checks}=data; const isMatch=match_score>=0.85;
+  document.getElementById('validation-title').textContent=isMatch?'Company match verified':'Company mismatch detected';
+  document.getElementById('validation-status').className=`validation-status ${isMatch?'success':(match_score>=0.6?'warn':'error')}`;
+  document.getElementById('validation-details').textContent=`Contract: "${contract_company}" vs Statement: "${statement_company}" — ${Math.round(match_score*100)}% match`;
+  if(!isMatch){ document.getElementById('match-alert').classList.add('visible'); document.getElementById('match-alert-details').innerHTML=warnings.map(w=>`<li>⚠ ${w}</li>`).join(''); } else { document.getElementById('match-alert').classList.remove('visible'); }
+  const grid=document.getElementById('validation-grid');
+  grid.innerHTML=checks.map(c=>`<div class="validation-item ${c.pass?'pass':(c.warn?'warn':'fail')}"><div class="validation-label">${c.label}</div><div class="validation-value" style="color:${c.pass?'var(--success)':(c.warn?'var(--warn)':'var(--danger)')}">${c.value}</div></div>`).join('');
+  document.getElementById('process-btn').disabled=!isMatch;
+}
+async function processFiles(){
+  if(!contractFile||!statementFile) return; if(!validationResult||validationResult.match_score<0.85){ alert('Company validation failed.'); return; }
+  const btn=document.getElementById('process-btn'); const btnText=document.getElementById('process-btn-text'); const spinner=document.getElementById('process-spinner'); btn.disabled=true; btnText.textContent='Processing…'; spinner.style.display='inline-block';
+  showLoading('Running pipeline','Extracting rules with Nemotron…');
+  try{
+    const fd=new FormData(); fd.append('contract',contractFile); fd.append('statement',statementFile);
+    const res=await fetch(apiUrl('/api/process-upload'),{method:'POST',body:fd});
+    showLoading('Reconciling','Deterministic fee engine…');
+    const data=await res.json(); if(data.error) throw new Error(data.error);
+    reconciliationResult=data; showLoading('Generating dispute','Preparing claim pack…'); await new Promise(r=>setTimeout(r,400)); showResults(data);
+  }catch(err){ alert('Processing error: '+err.message); }finally{ btn.disabled=false; btnText.textContent='Re-run reconciliation'; spinner.style.display='none'; hideLoading(); }
+}
+function showResults(data){
+  document.getElementById('results-section').classList.add('visible');
+  const {summary,rules_used,records,dispute_draft}=data;
+  document.getElementById('r-overcharge').textContent=`₹${summary.total_leakage.toLocaleString('en-IN',{minimumFractionDigits:2})}`;
+  document.getElementById('r-exceptions').textContent=summary.leak_count;
+  document.getElementById('r-matched').textContent=summary.match_count;
+  document.getElementById('r-match-rate').textContent=`${summary.match_rate_pct}%`;
+  document.getElementById('r-total').textContent=`${summary.total_records} txns`;
+  document.getElementById('r-gmv').textContent=`₹${summary.total_gmv.toLocaleString('en-IN',{minimumFractionDigits:2})}`;
+  document.getElementById('rf-leak').textContent=summary.leak_count;
+  document.getElementById('rf-all').textContent=summary.total_records;
+  document.getElementById('rf-match').textContent=summary.match_count;
+  renderRules(rules_used);
+  allRecords=records; renderResultTable();
+  document.getElementById('dispute-preview').textContent=dispute_draft||'No exceptions to dispute';
+  document.getElementById('results-section').scrollIntoView({behavior:'smooth'});
+}
+function renderRules(rules){
+  if(!rules) return; const grid=document.getElementById('extracted-rules'); const pms=rules.rules?.payment_methods||{}; let html='';
+  for(const [pm,conf] of Object.entries(pms)){
+    let rateStr=`${conf.rate_pct??0}%`; if(conf.type==='tiered_volume') rateStr='Tiered 1.50%–2.00%'; if(conf.fee_cap) rateStr+=` (Cap ₹${conf.fee_cap})`; if(conf.fixed_fee) rateStr+=` + ₹${conf.fixed_fee}/txn`;
+    const clause=conf.source_span||conf.type||'Extracted'; const pageRef=conf.page_number?` (p.${conf.page_number})`:'';
+    html+=`<div class="rule-card"><div class="rule-card-title">${pm}</div><div class="rule-card-rate">${rateStr}</div><div class="rule-card-clause">${clause}${pageRef}</div></div>`;
+  }
+  grid.innerHTML=html||'<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:16px">No rules extracted</div>';
+}
+let allRecords=[];
+function showTab(tab){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('visible')); document.querySelector(`.tab-btn[onclick*="${tab}"]`)?.classList.add('active'); document.getElementById(`tab-${tab}`).classList.add('visible'); }
+function setResultFilter(f,btn){ currentFilter=f; document.querySelectorAll('#tab-exceptions .filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderResultTable(); }
+function getClauseRef(pm){ const map={'UPI':'Clause 1.1 (p.3)','DOMESTIC_CARD':'Clause 1.2 (p.4)','NETBANKING':'Clause 1.3 (p.5)','INTERNATIONAL_CARD':'Clause 1.4 (p.6)','WALLET':'Clause 1.5 (p.7)'}; return map[pm]||'Clause 1.0'; }
+function renderResultTable(){
+  const q=(document.getElementById('result-search').value||'').toLowerCase();
+  const filtered=allRecords.filter(r=>{ if(currentFilter==='LEAK'&&r.status!=='LEAK') return false; if(currentFilter==='MATCH'&&r.status!=='MATCH') return false; if(q){ return r.txn_id.toLowerCase().includes(q)||r.payment_method.toLowerCase().includes(q)||(r.reason&&r.reason.toLowerCase().includes(q)); } return true; });
+  const tbody=document.getElementById('result-table-body');
+  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="8" class="empty-state">No records match filter</td></tr>'; return; }
+  let html=''; filtered.forEach(r=>{ const isLeak=r.status==='LEAK'; const badgeClass=isLeak?'status-leak':(r.status==='MATCH'?'status-match':'status-exception'); const statusText=isLeak?'LEAK':r.status; const billed=r.billed_total!==null?`₹${r.billed_total.toFixed(2)}`:'—'; const expected=r.expected_total!==null?`₹${r.expected_total.toFixed(2)}`:'—'; const delta=r.delta>0?`+₹${r.delta.toFixed(2)}`: (r.delta!==null?`₹${r.delta.toFixed(2)}`:'—'); const isSel=expandedTxnId===r.txn_id; const clauseRef=getClauseRef(r.payment_method);
+    html+=`<tr class="${isSel?'selected':''}" onclick="toggleResultRow('${r.txn_id}')"><td><span class="status-badge ${badgeClass}">${statusText}</span></td><td class="mono"><strong>${r.txn_id}</strong></td><td><strong>${r.payment_method}</strong></td><td class="mono" style="text-align:right">₹${r.amount.toFixed(2)}</td><td class="mono" style="text-align:right">${billed}</td><td class="mono" style="text-align:right">${expected}</td><td class="mono" style="text-align:right;${r.delta>0?'color:var(--danger);font-weight:700':''}">${delta}</td><td><span class="clause-chip">${clauseRef}</span><span style="color:${isLeak?'var(--danger)':'var(--muted)'}">${r.reason||'Match'}</span></td></tr>`;
+    if(isSel){ html+=`<tr class="detail-row"><td colspan="8" style="padding:0"><div class="detail-drawer"><div class="detail-head"><span class="detail-title">Audit trace — ${r.txn_id}</span><span class="detail-delta">Delta: ${delta}</span></div><div class="detail-formula"><strong>Formula:</strong> ${r.formula_audit||'N/A'}<br><strong>Expected:</strong> Base ₹${r.expected_fee??0} + GST ₹${r.expected_gst??0} = <strong>₹${r.expected_total?.toFixed(2)??0}</strong><br><strong>Billed:</strong> Base ₹${r.billed_fee??0} + GST ₹${r.billed_gst??0} = <strong>₹${r.billed_total?.toFixed(2)??0}</strong></div><div class="detail-evidence"><strong>Contract clause:</strong> ${clauseRef} — ${r.reason}${r.policy_note?'<br><strong style="color:var(--warn)">Policy override:</strong> '+r.policy_note:''}${r.source_span?'<br><strong>Source text:</strong> "'+r.source_span+'"':''}</div></div></td></tr>`; }
+  }); tbody.innerHTML=html; }
+function toggleResultRow(txnId){ expandedTxnId=expandedTxnId===txnId?null:txnId; renderResultTable(); }
+function resetUpload(){ contractFile=statementFile=null; validationResult=reconciliationResult=null; allRecords=[]; document.getElementById('contract-file').value=''; document.getElementById('statement-file').value=''; document.getElementById('contract-info').classList.remove('visible'); document.getElementById('statement-info').classList.remove('visible'); document.getElementById('contract-drop').classList.remove('valid','error'); document.getElementById('statement-drop').classList.remove('valid','error'); document.getElementById('validation-card').classList.remove('visible'); document.getElementById('match-alert').classList.remove('visible'); document.getElementById('results-section').classList.remove('visible'); document.getElementById('process-btn').disabled=true; document.getElementById('process-btn-text').textContent='Run reconciliation'; document.getElementById('process-spinner').style.display='none'; showTab('summary'); }
+function copyDisputeMD(){ const content=document.getElementById('dispute-preview').textContent||document.getElementById('dispute-full-content').textContent; navigator.clipboard.writeText(content); alert('Copied to clipboard'); }
+function downloadDisputeMD(){ const content=document.getElementById('dispute-preview').textContent||document.getElementById('dispute-full-content').textContent; const blob=new Blob([content],{type:'text/markdown'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`dispute_claim_${Date.now()}.md`; a.click(); URL.revokeObjectURL(url); }
+function downloadDisputeCSV(){ if(!reconciliationResult) return; const leaks=reconciliationResult.records.filter(r=>r.status==='LEAK'); if(!leaks.length){ alert('No leaks to export'); return; } const headers=['Txn ID','Date','Instrument','GMV','Billed Fee','Expected Fee','Overcharge','Clause','Reason']; const rows=leaks.map(r=>[r.txn_id,r.date||'',r.payment_method,r.amount.toFixed(2),r.billed_total?.toFixed(2)||'',r.expected_total?.toFixed(2)||'',r.delta?.toFixed(2)||'',getClauseRef(r.payment_method),r.reason||'']); const csv=[headers.join(','),...rows.map(r=>r.join(','))].join('\n'); const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`dispute_schedule_${Date.now()}.csv`; a.click(); URL.revokeObjectURL(url); }
+function openDisputeModal(){ const content=document.getElementById('dispute-preview').textContent; document.getElementById('dispute-full-content').textContent=content; document.getElementById('dispute-modal').classList.add('open'); }
+function closeDisputeModal(e){ if(e&&e.target!==e.currentTarget) return; document.getElementById('dispute-modal').classList.remove('open'); }
+['contract-drop','statement-drop'].forEach(id=>{ const el=document.getElementById(id); el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('drag-over');}); el.addEventListener('dragleave',e=>{e.preventDefault();el.classList.remove('drag-over');}); el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('drag-over'); const file=e.dataTransfer.files[0]; if(id==='contract-drop'){ if(file?.name?.toLowerCase().endsWith('.pdf')){ document.getElementById('contract-file').files=e.dataTransfer.files; handleContractFile({target:{files:e.dataTransfer.files}}); } }else{ const ext=file?.name?.toLowerCase().split('.').pop(); if(['csv','pdf'].includes(ext)){ document.getElementById('statement-file').files=e.dataTransfer.files; handleStatementFile({target:{files:e.dataTransfer.files}}); } } }); });
+updateApiBadge();
+</script>
+</body>
+</html>

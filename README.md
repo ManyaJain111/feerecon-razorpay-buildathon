@@ -80,6 +80,30 @@ Contract (PDF/Markdown)
 
 ---
 
+## Architecture Details (from AGENTS.md)
+
+### LLM Scope
+Only `src/rule_extractor.py` may call an LLM. Without `NVIDIA_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` it falls back to a deterministic offline parser (still 100% reproducible).
+
+### Adapter Factory
+`src/adapters/__init__.py:get_gateway_adapter(name)` → registered adapters: `razorpay`, `stripe`, `payu`. New gateway = subclass `src/adapters/base.py:GatewayAdapter` and add to the `ADAPTERS` dict.
+
+### Versioned Rules Registry
+`src/rules_registry.py` stores rules under `data/rules/rules_v{N}_{YYYY-MM-DD}.json`. Use `--rules-version 1.0` to pin.
+
+### Audit Store
+`reports/audit_store.db` (SQLite, gitignored). Idempotency keys are derived from `(txn_id, batch_id, rule_version)`.
+
+### Generated Artifacts (all gitignored)
+- `reports/audit_trail.csv`
+- `reports/audit_store.db`
+- `reports/dispute_draft_{BATCH}.md`
+- `reports/run_manifest_{ts}.json`
+- `reports/disagreements.json`
+- `__pycache__/`
+
+---
+
 ## Benchmark Results
 
 Tested on a synthetic settlement batch of **83 transactions** against `data/ground_truth.json`:
@@ -102,7 +126,7 @@ Tested on a synthetic settlement batch of **83 transactions** against `data/grou
 ```bash
 git clone <repository-url>
 cd razorpay-fee-leakage-detector
-pip install -r requirements.txt
+pip install -r requirements.txt        # pandas, pytest, tabulate, rich only - no LLM SDK
 ```
 
 ### 2. Run Full Reconciliation Pipeline
@@ -122,6 +146,12 @@ python3 run.py --extract --force
 
 # Update dispute tracking for a resolved claim
 python3 run.py --update-dispute TXN_123 --dispute-status resolved --resolution-amount 576.01
+
+# Process a single PDF (contract or statement, auto-detected)
+python3 run.py --pdf sample_pdf/1.pdf
+
+# Regenerate CSVs and rules JSON for the 4 sample PDFs
+python3 run.py --generate-statements
 ```
 
 ### 3. Launch Web UI Dashboard (local)
@@ -142,6 +172,21 @@ python3 -m pytest -v
 ```bash
 python3 run.py --benchmark
 ```
+
+---
+
+## Sample PDFs (Multi-Domain Demos)
+
+`sample_pdf/1.pdf` ... `4.pdf` are pre-paired with rule + statement files in `data/`:
+
+| PDF | Domain | Rules File | Statement File |
+|-----|--------|------------|----------------|
+| `sample_pdf/1.pdf` | Wealth Advisory | `data/rules_1_axos.json` | `data/statement_1_axos.csv` |
+| `sample_pdf/2.pdf` | Public SaaS | `data/rules_2_sfusd.json` | `data/statement_2_sfusd.csv` |
+| `sample_pdf/3.pdf` | ETF Custody | `data/rules_3_huntington.json` | `data/statement_3_huntington.csv` |
+| `sample_pdf/4.pdf` | Brokerage | `data/rules_4_btpanorama.json` | `data/statement_4_btpanorama.csv` |
+
+Load via web UI: `POST /api/load-sample` with `{"sample_id": "1"}` or CLI: `python3 run.py --pdf sample_pdf/1.pdf`
 
 ---
 
@@ -316,7 +361,7 @@ az appservice plan update \
 | `--gateway` | Payment gateway adapter: `razorpay`, `stripe`, `payu` (default: razorpay) |
 | `--contract` | Path to merchant pricing contract (Markdown, plain text, or PDF) |
 | `--settlement` | Path to settlement CSV or PDF file |
-| `--pdf` | Process a single PDF contract or statement directly |
+| `--pdf` | Process a single PDF contract or statement directly (auto-detected) |
 | `--extract` | Force re-extraction of rules with 3-pass consistency validation |
 | `--force` | Proceed despite extraction disagreements |
 | `--rules-version` | Pin to specific ruleset version (e.g., `1.0`) |
@@ -468,19 +513,32 @@ confidence_thresholds:
 
 | Variable | Purpose |
 |----------|---------| 
-| `ANTHROPIC_API_KEY` | Enables LLM-based extraction (Claude 3.5 Sonnet) |
-| `OPENAI_API_KEY` | Alternative LLM provider (if configured) |
+| `NVIDIA_API_KEY` | **Primary** - Enables NVIDIA NIM models (Nemotron-3-Ultra, Llama-3.1-Nemotron-70B) for rule extraction |
+| `ANTHROPIC_API_KEY` | Fallback LLM (Claude 3.5 Sonnet) |
+| `OPENAI_API_KEY` | Alternative LLM provider |
 
-*Without API keys: Uses deterministic offline parser (100% reproducible)*
+*Without API keys: Uses deterministic offline parser (100% reproducible, no NVIDIA NIM features)*
 
-**On Azure App Service**, set these via the portal (*Configuration → Application settings*) or with the CLI:
+**Local Development** - Create `.env` file in project root:
+```bash
+NVIDIA_API_KEY=your_nvidia_nim_key_here
+# Optional fallbacks:
+# ANTHROPIC_API_KEY=sk-ant-...
+# OPENAI_API_KEY=sk-...
+```
 
+**On Azure App Service**, set via portal (*Configuration → Application settings*) or CLI:
 ```bash
 az webapp config appsettings set \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
-  --settings ANTHROPIC_API_KEY="sk-..." OPENAI_API_KEY="sk-..."
+  --settings NVIDIA_API_KEY="your_key" ANTHROPIC_API_KEY="sk-..." OPENAI_API_KEY="sk-..."
 ```
+
+**NVIDIA NIM Models Used:**
+- `nvidia/nemotron-3-ultra` - Primary rule extraction (best reasoning)
+- `nvidia/llama-3.1-nemotron-70b-instruct` - Fast fallback
+- `nvidia/llama-3.1-nemotron-51b` - Lightweight option
 
 ---
 
