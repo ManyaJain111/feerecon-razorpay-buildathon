@@ -483,6 +483,7 @@ class ReconcileHTTPHandler(BaseHTTPRequestHandler):
                 # Run reconciliation against statement
                 recon = run_reconciliation(sample["statement_file"], rules_override=rules_data, batch_id=f"SAMPLE_{sample_id}")
                 recon["sample_info"] = sample
+                recon["dispute_draft"] = generate_dispute_draft(recon.get("records", []), rules_data or {}, batch_id=f"SAMPLE_{sample_id}")
                 self._send_response_json(recon)
             except Exception as e:
                 self._send_response_json({"error": str(e)}, 400)
@@ -499,29 +500,39 @@ class ReconcileHTTPHandler(BaseHTTPRequestHandler):
                     return
                 
                 sample = next((s for s in SAMPLE_PDF_CATALOG if s["id"] == sample_id or s["filename"] == sample_id), None)
-                if not sample:
-                    self._send_response_json({"error": "Sample not found"}, 404)
-                    return
-                
+
                 # Load current rules
                 rules_data = None
-                if os.path.exists(sample["rules_file"]):
+                if sample and os.path.exists(sample["rules_file"]):
                     with open(sample["rules_file"], "r", encoding="utf-8") as f:
                         rules_data = json.load(f)
                 else:
+                    # 'custom' uploads or unknown ids — fall back to default engine rules
                     _, rules_data = get_engine_and_rules()
-                
+
                 # Apply policy changes
                 amended_rules, applied_changes = apply_policy_prompt(rules_data, prompt)
-                
+
                 # Run reconciliation with amended rules
-                recon = run_reconciliation(sample["statement_file"], rules_override=amended_rules, batch_id=f"POLICY_{sample_id}")
-                recon["sample_info"] = sample
+                if sample:
+                    recon = run_reconciliation(sample["statement_file"], rules_override=amended_rules, batch_id=f"POLICY_{sample_id}")
+                    recon["sample_info"] = sample
+                else:
+                    recon = run_reconciliation(SETTLEMENT_PATH, rules_override=amended_rules, batch_id=f"POLICY_custom")
+
                 recon["policy_metadata"] = {
                     "original_prompt": prompt,
                     "applied_changes": applied_changes
                 }
-                
+
+                # Generate updated dispute draft
+                draft = generate_dispute_draft(
+                    recon.get("records", []),
+                    amended_rules,
+                    batch_id=recon.get("batch_id", f"POLICY_{sample_id}")
+                )
+                recon["dispute_draft"] = draft
+
                 self._send_response_json(recon)
             except Exception as e:
                 self._send_response_json({"error": str(e)}, 400)
@@ -861,6 +872,7 @@ def create_app():
                 rules_data = json.load(f)
         recon = run_reconciliation(sample["statement_file"], rules_override=rules_data, batch_id=f"SAMPLE_{sample_id}")
         recon["sample_info"] = sample
+        recon["dispute_draft"] = generate_dispute_draft(recon.get("records", []), rules_data or {}, batch_id=f"SAMPLE_{sample_id}")
         return recon
 
     @app.post("/api/upload-settlement")
@@ -985,28 +997,42 @@ def create_app():
     async def apply_nlp_policy(payload: Dict[str, Any]):
         prompt = str(payload.get("prompt", "")).strip()
         sample_id = str(payload.get("sample_id", "1"))
-        
+
         if not prompt:
             raise HTTPException(status_code=400, detail="Prompt cannot be empty")
 
         sample = next((s for s in SAMPLE_PDF_CATALOG if s["id"] == sample_id or s["filename"] == sample_id), None)
-        if not sample:
-            raise HTTPException(status_code=404, detail="Sample not found")
 
         rules_data = None
-        if os.path.exists(sample["rules_file"]):
+        if sample and os.path.exists(sample["rules_file"]):
             with open(sample["rules_file"], "r", encoding="utf-8") as f:
                 rules_data = json.load(f)
         else:
-            engine, rules_data = get_engine_and_rules()
+            # 'custom' uploads or unknown ids — fall back to default engine rules
+            _, rules_data = get_engine_and_rules()
 
         amended_rules, applied_changes = apply_policy_prompt(rules_data, prompt)
-        recon = run_reconciliation(sample["statement_file"], rules_override=amended_rules, batch_id=f"POLICY_{sample_id}")
-        recon["sample_info"] = sample
+
+        if sample:
+            recon = run_reconciliation(sample["statement_file"], rules_override=amended_rules, batch_id=f"POLICY_{sample_id}")
+        else:
+            recon = run_reconciliation(SETTLEMENT_PATH, rules_override=amended_rules, batch_id=f"POLICY_custom")
+
         recon["policy_metadata"] = {
             "original_prompt": prompt,
             "applied_changes": applied_changes
         }
+
+        # Generate updated dispute draft
+        draft = generate_dispute_draft(
+            recon.get("records", []),
+            amended_rules,
+            batch_id=recon.get("batch_id", f"POLICY_{sample_id}")
+        )
+        recon["dispute_draft"] = draft
+
+        if sample:
+            recon["sample_info"] = sample
         return recon
 
     # -----------------------------------------------------------------------

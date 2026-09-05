@@ -224,9 +224,7 @@ tr.selected{background:#eef2ff}
     <a href="demo-run.html" class="active">Run Reconciliation</a>
     <a href="upload.html">Upload</a>
     <a href="https://github.com/ManyaJain111/feerecon-razorpay-buildathon/" target="_blank">GitHub</a>
-    <button class="btn" onclick="promptApiUrl()" style="background:none;border:none;padding:5px 8px;cursor:pointer;font-size:11px">
-      <span id="api-badge" style="color:var(--success)">Local</span>
-    </button>
+   
   </nav>
 </header>
 
@@ -307,7 +305,7 @@ tr.selected{background:#eef2ff}
   </div>
 
   <section class="results-section" id="results-section">
-    <div class="policy-override-card">
+    <div class="policy-override-card" id="policy-override-card">
       <div class="policy-head">
         <div class="policy-title">
           <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
@@ -407,7 +405,9 @@ tr.selected{background:#eef2ff}
 
 <script>
 let reconciliationResult=null;
-let apiBase = localStorage.getItem('API_BASE_URL') || '';
+let apiBase = '';
+// Clear any stored API base URL - for hackathon demo, use same-origin only
+localStorage.removeItem('API_BASE_URL');
 let currentFilter='LEAK', expandedTxnId=null;
 let rawDisputeMD = '';
 let disputeViewMode = 'rendered';
@@ -453,7 +453,7 @@ function toggleDisputeViewMode(){
 function apiUrl(endpoint){ if(!apiBase) return endpoint; const base=apiBase.endsWith('/')?apiBase.slice(0,-1):apiBase; const path=endpoint.startsWith('/')?endpoint:'/'+endpoint; return `${base}${path}`; }
 function showLoading(text,sub){ document.getElementById('loading-text').textContent=text; document.getElementById('loading-sub').textContent=sub; document.getElementById('loading-overlay').classList.add('visible'); }
 function hideLoading(){ document.getElementById('loading-overlay').classList.remove('visible'); }
-function updateApiBadge(){ document.getElementById('api-badge').textContent=apiBase?'Remote':'Local'; }
+function updateApiBadge(){ const el=document.getElementById('api-badge'); if(el) el.textContent=apiBase?'Remote':'Local'; }
 function promptApiUrl(){ const entered=prompt('Backend API URL (e.g. https://your-backend.onrender.com) or empty for same-origin:',apiBase); if(entered!==null){ apiBase=entered.trim(); if(apiBase) localStorage.setItem('API_BASE_URL',apiBase); else localStorage.removeItem('API_BASE_URL'); updateApiBadge(); loadSampleInfo(); } }
 
 const STEPS = ['load','extract','parse','reconcile','classify','done'];
@@ -688,10 +688,10 @@ function setPolicyDirective(text){
 }
 
 async function applyPolicyPrompt(){
-  const prompt = document.getElementById('policy-prompt-input').value.trim();
+  const prompt = document.getElementById('policy-prompt-input')?.value.trim();
   if(!prompt) return;
-  const btn = document.querySelector('#policy-override-card .btn-primary');
-  btn.disabled = true; btn.textContent = 'Applying…';
+  const btn = document.querySelector('#policy-override-card .btn-primary') || document.querySelector('.policy-override-card .btn-primary');
+  if(btn) { btn.disabled = true; btn.textContent = 'Applying…'; }
   try{
     const res = await fetch(apiUrl('/api/apply-nlp-policy'), {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -704,9 +704,13 @@ async function applyPolicyPrompt(){
     activeAmendment = data.policy_metadata;
 
     const banner = document.getElementById('active-amendment');
-    banner.classList.add('visible');
-    document.getElementById('active-amendment-text').textContent = `"${data.policy_metadata.original_prompt}"`;
-    document.getElementById('active-amendment-changes').textContent = `Applied: ${data.policy_metadata.applied_changes.join(' • ')}`;
+    if(banner) {
+      banner.classList.add('visible');
+      const textEl = document.getElementById('active-amendment-text');
+      if(textEl) textEl.textContent = `"${data.policy_metadata.original_prompt}"`;
+      const chgEl = document.getElementById('active-amendment-changes');
+      if(chgEl) chgEl.textContent = `Applied: ${data.policy_metadata.applied_changes.join(' • ')}`;
+    }
 
     renderRules(data.rules_used);
     updateKPIs(data.summary);
@@ -719,7 +723,7 @@ async function applyPolicyPrompt(){
   }catch(err){
     alert('Policy error: '+err.message);
   }finally{
-    btn.disabled = false; btn.textContent = 'Apply Directive';
+    if(btn) { btn.disabled = false; btn.textContent = 'Apply Directive'; }
   }
 }
 

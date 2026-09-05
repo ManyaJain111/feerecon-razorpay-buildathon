@@ -76,9 +76,7 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);displ
     <a href="demo-run.html">Run Reconciliation</a>
     <a href="upload.html">Upload</a>
     <a href="https://github.com/ManyaJain111/feerecon-razorpay-buildathon/" target="_blank">GitHub</a>
-    <button class="btn" onclick="promptApiUrl()" style="background:none;border:none;padding:5px 8px;cursor:pointer;font-size:11px">
-      <span id="api-badge" style="color:var(--success)">Local</span>
-    </button>
+    
   </nav>
 </header>
 
@@ -105,7 +103,9 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);displ
 </footer>
 
 <script>
-let apiBase = localStorage.getItem('API_BASE_URL') || '';
+let apiBase = '';
+// Clear any stored API base URL - for hackathon demo, use same-origin only
+localStorage.removeItem('API_BASE_URL');
 
 function apiUrl(endpoint){
   if(!apiBase) return endpoint;
@@ -119,10 +119,9 @@ async function checkBackend(){
   try{
     const res = await fetch(apiUrl('/health'));
     if(res.ok){
-      badge.textContent = apiBase ? 'Remote ✓' : 'Local ✓';
-      badge.style.color = 'var(--success)';
-    }else{ badge.textContent='Error'; badge.style.color='var(--danger)'; }
-  }catch{ badge.textContent='Offline'; badge.style.color='var(--danger)'; }
+      if(badge){ badge.textContent = apiBase ? 'Remote ✓' : 'Local ✓'; badge.style.color = 'var(--success)'; }
+    }else{ if(badge){ badge.textContent='Error'; badge.style.color='var(--danger)'; } }
+  }catch{ if(badge){ badge.textContent='Offline'; badge.style.color='var(--danger)'; } }
 }
 
 function promptApiUrl(){
@@ -158,9 +157,10 @@ async function loadCompanies(){
           method:'POST', headers:{'Content-Type':'application/json'},
           body:JSON.stringify({sample_id:s.id, preview_only:true})
         });
-        const data = await res.json();
-        if(data.summary){
-          document.getElementById(`gmv-${s.id}`).textContent = '₹' + (data.summary.total_gmv||0).toLocaleString('en-IN');
+        const sampleData = await res.json();
+        const gmvEl = document.getElementById(`gmv-${s.id}`);
+        if(gmvEl && sampleData && sampleData.summary){
+          gmvEl.textContent = '₹' + (sampleData.summary.total_gmv||0).toLocaleString('en-IN');
         }
       }catch(e){
         console.warn('Preview failed for', s.id, e);
