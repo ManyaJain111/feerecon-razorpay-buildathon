@@ -1,0 +1,96 @@
+{
+  "contract_id": "WP-GLOBAL-2025-001",
+  "merchant_name": "Worldpay LLC",
+  "effective_date": "2025-01-01",
+  "version": "1.0",
+  "rules": {
+    "payment_methods": {
+      "DOMESTIC_CARD": {
+        "type": "blended_tiered",
+        "tiers": [
+          {
+            "min_volume": 0.0,
+            "max_volume": 50000.0,
+            "rate_pct": 2.9,
+            "tier_name": "Standard",
+            "confidence": 0.98,
+            "source_span": "Up to $50K: 2.90% blended rate.",
+            "needs_review": false
+          },
+          {
+            "min_volume": 50000.01,
+            "max_volume": 250000.0,
+            "rate_pct": 2.6,
+            "tier_name": "Professional",
+            "confidence": 0.97,
+            "source_span": "$50K to $250K: 2.60% blended rate.",
+            "needs_review": false
+          },
+          {
+            "min_volume": 250000.01,
+            "max_volume": null,
+            "rate_pct": 2.3,
+            "tier_name": "Enterprise",
+            "confidence": 0.97,
+            "source_span": "Above $250K: 2.30% blended rate.",
+            "needs_review": false
+          }
+        ],
+        "confidence": 0.98,
+        "source_span": "Blended rate pricing tiered by monthly processing volume.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "INTERNATIONAL_CARD": {
+        "type": "blended_plus_markup",
+        "rate_pct": 3.5,
+        "fixed_fee": 0.30,
+        "confidence": 0.96,
+        "source_span": "Cross-border at 3.50% + $0.30 per transaction.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "MULTI_CURRENCY": {
+        "type": "flat_plus_fixed",
+        "rate_pct": 1.0,
+        "fixed_fee": 0.0,
+        "confidence": 0.95,
+        "source_span": "Multi-currency settlement markup 1.00% on FX rate.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "ACH": {
+        "type": "flat",
+        "rate_pct": 0.8,
+        "fixed_fee": 0.25,
+        "confidence": 0.94,
+        "source_span": "ACH processing at 0.80% + $0.25 per transaction.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      }
+    },
+    "refund_policy": {
+      "standard_fee": 5.0,
+      "waiver_window_hours": 0.0,
+      "waived_fee": 5.0,
+      "confidence": 0.98,
+      "source_span": "$5.00 refund fee per transaction. No time-based waiver.",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    },
+    "chargeback_fee": {
+      "amount": 15.0,
+      "confidence": 0.97,
+      "source_span": "$15.00 chargeback fee per dispute.",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    },
+    "statutory_tax": {
+      "gst_rate_pct": 0.0,
+      "confidence": 0.99,
+      "source_span": "US sales tax applies where nexus exists. No GST.",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    }
+  }
+}

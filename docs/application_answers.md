@@ -1,7 +1,7 @@
 # Hackathon Application Answers: Razorpay Fee Leakage Detector
 **Track:** AI Finance Controller  
 **Project Name:** Razorpay Fee Leakage Detector  
-**Repository:** [github.com/your-org/razorpay-fee-leakage-detector]
+**Repository:** [https://github.com/ManyaJain111/feerecon-razorpay-buildathon/](https://github.com/ManyaJain111/feerecon-razorpay-buildathon/)
 
 ---
 

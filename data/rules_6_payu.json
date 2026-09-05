@@ -1,0 +1,106 @@
+{
+  "contract_id": "PAYU-IND-2025-001",
+  "merchant_name": "PayU Payments Private Limited",
+  "effective_date": "2025-01-01",
+  "version": "1.0",
+  "rules": {
+    "payment_methods": {
+      "UPI": {
+        "type": "flat",
+        "rate_pct": 0.0,
+        "fixed_fee": 0.0,
+        "confidence": 0.99,
+        "source_span": "UPI transactions at 0% MDR with zero fixed fee as per NPCI guidelines.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "DOMESTIC_CARD": {
+        "type": "tiered_volume",
+        "tiers": [
+          {
+            "min_volume": 0.0,
+            "max_volume": 1000000.0,
+            "rate_pct": 2.0,
+            "tier_name": "Base Tier",
+            "confidence": 0.98,
+            "source_span": "Up to ₹10L monthly volume: 2.00% MDR.",
+            "needs_review": false
+          },
+          {
+            "min_volume": 1000000.01,
+            "max_volume": 5000000.0,
+            "rate_pct": 1.75,
+            "tier_name": "Growth Tier",
+            "confidence": 0.97,
+            "source_span": "₹10L to ₹50L monthly volume: 1.75% MDR.",
+            "needs_review": false
+          },
+          {
+            "min_volume": 5000000.01,
+            "max_volume": null,
+            "rate_pct": 1.5,
+            "tier_name": "Enterprise Tier",
+            "confidence": 0.97,
+            "source_span": "Above ₹50L monthly volume: 1.50% MDR.",
+            "needs_review": false
+          }
+        ],
+        "confidence": 0.98,
+        "source_span": "Domestic credit/debit card MDR based on monthly volume slabs.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "NETBANKING": {
+        "type": "flat_with_cap",
+        "rate_pct": 1.5,
+        "fee_cap": 15.0,
+        "confidence": 0.96,
+        "source_span": "Netbanking at 1.5% MDR with maximum fee cap of ₹15 per transaction.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "WALLET": {
+        "type": "flat",
+        "rate_pct": 2.0,
+        "fixed_fee": 0.0,
+        "confidence": 0.95,
+        "source_span": "Wallet payments (Paytm, PhonePe, Amazon Pay) at 2.00% MDR.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "BNPL": {
+        "type": "flat",
+        "rate_pct": 2.5,
+        "fixed_fee": 0.0,
+        "confidence": 0.94,
+        "source_span": "BNPL (LazyPay, Simpl) at 2.50% MDR.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      }
+    },
+    "refund_policy": {
+      "standard_fee": 3.0,
+      "waiver_window_hours": 24.0,
+      "waived_fee": 0.0,
+      "confidence": 0.98,
+      "source_span": "Refund processing fee ₹3 waived if initiated within 24 hours.",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    },
+    "instant_settlement": {
+      "rate_pct": 0.2,
+      "disallowed_risk_ratings": ["HIGH_RISK", ""],
+      "confidence": 0.93,
+      "source_span": "Instant settlement surcharge 0.20%. Not available for HIGH_RISK transactions.",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    },
+    "statutory_tax": {
+      "gst_rate_pct": 18.0,
+      "confidence": 0.99,
+      "source_span": "All fees subject to 18% GST.",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    }
+  }
+}

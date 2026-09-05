@@ -144,9 +144,9 @@ class TransactionClassifier:
             elif pm == "DOMESTIC_CARD" and vol > 500000.0:
                 leak_type = LeakTypeEnum.WRONG_TIER_APPLIED.value
                 diag_reason = f"Card volume ₹{vol:,.2f} entitled to lower tier, but charged higher tier (Leakage: ₹{delta:.2f})."
-            elif pm == "NETBANKING" and billed_fee > 20.0:
+            elif (pm == "NETBANKING" and billed_fee > 20.0) or (pm == "ACH" and billed_fee > 5.0):
                 leak_type = LeakTypeEnum.CAP_VIOLATION.value
-                diag_reason = f"Netbanking ₹20 fee cap ignored (Billed base fee ₹{billed_fee:.2f} > ₹20.00 max cap; Leakage: ₹{delta:.2f})."
+                diag_reason = f"{pm} fee cap ignored (Billed fee ₹{billed_fee:.2f} > max cap; Leakage: ₹{delta:.2f})."
             elif txn.get("is_refund") and txn.get("refund_hours_after_txn") is not None and float(txn["refund_hours_after_txn"]) <= 24.0:
                 leak_type = LeakTypeEnum.MISSED_REFUND_WAIVER.value
                 diag_reason = f"Refund within {txn['refund_hours_after_txn']}h (< 24h) charged refund processing fee instead of waiver (Leakage: ₹{delta:.2f})."

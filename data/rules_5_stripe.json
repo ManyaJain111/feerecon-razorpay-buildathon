@@ -1,0 +1,62 @@
+{
+  "contract_id": "STRIPE-COMM-2025-001",
+  "merchant_name": "Stripe Payments Inc.",
+  "effective_date": "2025-01-01",
+  "version": "1.0",
+  "rules": {
+    "payment_methods": {
+      "DOMESTIC_CARD": {
+        "type": "flat",
+        "rate_pct": 2.9,
+        "fixed_fee": 0.30,
+        "confidence": 0.98,
+        "source_span": "2.9% + $0.30 per successful card charge for domestic cards.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "INTERNATIONAL_CARD": {
+        "type": "flat_plus_fixed",
+        "rate_pct": 3.9,
+        "fixed_fee": 0.30,
+        "confidence": 0.97,
+        "source_span": "3.9% + $0.30 per successful card charge for international cards.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "ACH": {
+        "type": "flat_with_cap",
+        "rate_pct": 0.8,
+        "fee_cap": 5.0,
+        "confidence": 0.96,
+        "source_span": "ACH direct debit at 0.8% capped at $5.00 per transaction.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "INSTANT_PAYOUT": {
+        "type": "flat",
+        "rate_pct": 1.5,
+        "fixed_fee": 0.0,
+        "confidence": 0.95,
+        "source_span": "Instant Payouts incur an additional 1.5% fee on the payout amount.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      }
+    },
+    "refund_policy": {
+      "standard_fee": 0.0,
+      "waiver_window_hours": 0.0,
+      "waived_fee": 0.0,
+      "confidence": 0.99,
+      "source_span": "No fees for refunds. Original transaction fees are not returned.",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    },
+    "statutory_tax": {
+      "gst_rate_pct": 0.0,
+      "confidence": 0.99,
+      "source_span": "Taxes apply based on jurisdiction. US transactions typically no GST.",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    }
+  }
+}

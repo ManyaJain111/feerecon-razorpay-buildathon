@@ -1,0 +1,106 @@
+{
+  "contract_id": "RZP-STD-2025-001",
+  "merchant_name": "Razorpay Software Private Limited",
+  "effective_date": "2025-01-01",
+  "version": "1.0",
+  "rules": {
+    "payment_methods": {
+      "UPI": {
+        "type": "flat",
+        "rate_pct": 0.0,
+        "fixed_fee": 0.0,
+        "confidence": 0.99,
+        "source_span": "UPI transactions at zero MDR as per RBI mandate.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "DOMESTIC_CARD": {
+        "type": "tiered_volume",
+        "tiers": [
+          {
+            "min_volume": 0.0,
+            "max_volume": 500000.0,
+            "rate_pct": 2.0,
+            "tier_name": "Standard",
+            "confidence": 0.98,
+            "source_span": "Up to ₹5L: 2.00% MDR per transaction.",
+            "needs_review": false
+          },
+          {
+            "min_volume": 500000.01,
+            "max_volume": 2000000.0,
+            "rate_pct": 1.75,
+            "tier_name": "Growth",
+            "confidence": 0.97,
+            "source_span": "₹5L to ₹20L: 1.75% MDR per transaction.",
+            "needs_review": false
+          },
+          {
+            "min_volume": 2000000.01,
+            "max_volume": null,
+            "rate_pct": 1.5,
+            "tier_name": "Enterprise",
+            "confidence": 0.97,
+            "source_span": "Above ₹20L: 1.50% MDR per transaction.",
+            "needs_review": false
+          }
+        ],
+        "confidence": 0.98,
+        "source_span": "Domestic card MDR tiered by monthly volume.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "NETBANKING": {
+        "type": "flat_with_cap",
+        "rate_pct": 1.5,
+        "fee_cap": 15.0,
+        "confidence": 0.96,
+        "source_span": "Netbanking at 1.5% capped at ₹15 per transaction.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "INTERNATIONAL_CARD": {
+        "type": "flat_plus_fixed",
+        "rate_pct": 3.0,
+        "fixed_fee": 7.0,
+        "confidence": 0.95,
+        "source_span": "International cards at 3.00% + ₹7 per transaction.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "WALLET": {
+        "type": "flat",
+        "rate_pct": 2.0,
+        "fixed_fee": 0.0,
+        "confidence": 0.95,
+        "source_span": "Wallet/BNPL at 2.00% MDR.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      }
+    },
+    "refund_policy": {
+      "standard_fee": 5.0,
+      "waiver_window_hours": 24.0,
+      "waived_fee": 0.0,
+      "confidence": 0.98,
+      "source_span": "₹5 refund fee waived within 24 hours.",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    },
+    "instant_settlement": {
+      "rate_pct": 0.15,
+      "disallowed_risk_ratings": ["SPECIAL_REVIEW", ""],
+      "confidence": 0.94,
+      "source_span": "Instant settlement 0.15% surcharge. Not for SPECIAL_REVIEW.",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    },
+    "statutory_tax": {
+      "gst_rate_pct": 18.0,
+      "confidence": 0.99,
+      "source_span": "All fees inclusive of 18% GST.",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    }
+  }
+}

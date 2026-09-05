@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fee Leakage Detector Upload — Custom Contract &amp; Statement</title>
+<title>FeeRecon Demo — Run Reconciliation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -38,34 +38,14 @@ nav a:hover{background:#f3f4f6;color:var(--text)}
 nav a.active{background:#e5e7eb;color:var(--text)}
 .meta-right{display:flex;gap:12px;align-items:center;font-size:10px;color:var(--muted)}
 main{max-width:1100px;margin:0 auto;padding:24px}
-.page-header{text-align:center;margin-bottom:24px}
+.page-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:24px}
 .page-title{font-size:22px;font-weight:700;margin-bottom:6px}
-.page-sub{font-size:13px;color:var(--muted);max-width:640px;margin:0 auto}
-.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
-@media (max-width:860px){.upload-grid{grid-template-columns:1fr}}
-.upload-col{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:20px}
-.col-title{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:4px}
-.col-title .icon{width:28px;height:28px;background:#f3f4f6;border-radius:6px;display:flex;align-items:center;justify-content:center}
-.col-title .icon svg{width:16px;height:16px;stroke:var(--accent)}
-.col-desc{font-size:12px;color:var(--muted);margin-bottom:16px}
-.drop-zone{border:2px dashed var(--border);border-radius:6px;padding:28px 16px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
-.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:#f9fafb}
-.drop-zone.valid{border-color:var(--success);background:var(--success-bg)}
-.drop-zone.error{border-color:var(--danger);background:var(--danger-bg)}
-.drop-icon{width:40px;height:40px;margin:0 auto 10px;stroke:var(--muted)}
-.drop-title{font-size:13px;font-weight:600;margin-bottom:4px}
-.drop-desc{font-size:11px;color:var(--muted);margin-bottom:10px}
-.drop-formats{font-size:10px;color:var(--muted);display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-.format-badge{background:var(--bg);border:1px solid var(--border);padding:2px 8px;border-radius:3px;font-family:var(--mono)}
-.file-input{display:none}
-.file-info{display:none;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;margin-top:12px}
-.file-info.visible{display:block}
-.file-info-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-.file-info-title{font-size:12px;font-weight:600}
-.file-info-meta{font-size:10px;color:var(--muted)}
-.file-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px}
-.file-remove:hover{color:var(--danger)}
-/* Pipeline steps */
+.page-sub{font-size:13px;color:var(--muted);max-width:640px}
+.sample-info{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:24px}
+.sample-info-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+.sample-title{font-size:16px;font-weight:700}
+.sample-meta{display:flex;gap:16px;font-size:11px;color:var(--muted);flex-wrap:wrap}
+.sample-meta strong{color:var(--text);font-weight:600}
 .pipeline-steps{display:none;margin-top:20px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px}
 .pipeline-steps.visible{display:block}
 .pipeline-steps-title{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);font-weight:600;margin-bottom:12px}
@@ -81,7 +61,6 @@ main{max-width:1100px;margin:0 auto;padding:24px}
 .step-item.done .step-label{color:var(--success)}
 .step-item.active .step-label{color:var(--accent)}
 .step-sub{font-size:9px;color:var(--muted);text-align:center;margin-top:2px}
-/* Validation card (file-only, no company match) */
 .validation-card{display:none;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px;margin-top:16px}
 .validation-card.visible{display:block}
 .validation-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
@@ -131,6 +110,45 @@ main{max-width:1100px;margin:0 auto;padding:24px}
 .rule-card-title{font-size:11px;font-weight:600;margin-bottom:4px}
 .rule-card-rate{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent);margin-bottom:2px}
 .rule-card-clause{font-size:10px;color:var(--muted)}
+.policy-override-card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:16px;
+  margin-bottom:16px;
+}
+.policy-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:12px;
+}
+.policy-title{
+  font-size:12px;
+  font-weight:700;
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.policy-title .icon{
+  width:28px;height:28px;
+  background:#fef3c7;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+}
+.policy-title .icon svg{width:16px;height:16px;stroke:#b45309}
+.policy-desc{font-size:11px;color:var(--muted);margin-top:2px}
+.policy-input-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.policy-input{flex:1;min-width:280px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:4px;font-size:13px;font-family:var(--sans)}
+.policy-input:focus{outline:none;border-color:var(--accent);background:var(--panel)}
+.policy-suggest{background:var(--warn-bg);border:1px solid #fde68a;color:#78350f;padding:8px 12px;border-radius:4px;font-size:11px;margin-bottom:8px;display:none}
+.policy-suggest.visible{display:block}
+.policy-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.policy-chip{background:var(--bg);border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:999px;font-size:10px;font-weight:500;cursor:pointer;transition:all .15s}
+.policy-chip:hover{background:#eef2ff;border-color:var(--accent);color:var(--accent)}
+.active-amendment{display:none;background:var(--warn-bg);border:1px solid #fde68a;border-radius:6px;padding:10px 12px;margin-top:10px;font-size:11px;color:#78350f}
+.active-amendment.visible{display:block}
+.active-amendment strong{color:#b45309}
 .table-container{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden}
 .table-toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--bg)}
 .table-title{font-size:12px;font-weight:600}
@@ -173,7 +191,6 @@ tr.selected{background:#eef2ff}
 .modal-body{padding:14px 16px;overflow:auto;font-family:var(--mono);font-size:11px;line-height:1.6;white-space:pre-wrap;background:#f9fafb;color:#374155;max-height:55vh}
 .modal-footer{padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
 .empty-state{text-align:center;padding:32px;color:var(--muted)}
-/* Markdown prose rendering */
 .md-prose{font-family:var(--sans);font-size:13px;line-height:1.7;color:var(--text);padding:20px 24px;background:#fff;overflow:auto}
 .md-prose h1{font-size:20px;font-weight:700;margin:0 0 16px;padding-bottom:10px;border-bottom:2px solid var(--border);color:var(--accent)}
 .md-prose h2{font-size:15px;font-weight:700;margin:24px 0 10px;color:var(--accent)}
@@ -193,59 +210,19 @@ tr.selected{background:#eef2ff}
 .md-prose tr:nth-child(even) td{background:#fafafa}
 .md-prose hr{border:none;border-top:1px solid var(--border);margin:20px 0}
 .md-prose a{color:var(--accent);text-decoration:underline}
-
-/* Policy Override Card */
-.policy-override-card{
-  background:var(--panel);
-  border:1px solid var(--border);
-  border-radius:6px;
-  padding:16px;
-  margin-bottom:16px;
-}
-.policy-head{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:12px;
-}
-.policy-title{
-  font-size:12px;
-  font-weight:700;
-  color:var(--text);
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-.policy-title .icon{
-  width:28px;height:28px;
-  background:#fef3c7;border-radius:6px;
-  display:flex;align-items:center;justify-content:center;
-}
-.policy-title .icon svg{width:16px;height:16px;stroke:#b45309}
-.policy-desc{font-size:11px;color:var(--muted);margin-top:2px}
-.policy-input-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-.policy-input{flex:1;min-width:280px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:4px;font-size:13px;font-family:var(--sans)}
-.policy-input:focus{outline:none;border-color:var(--accent);background:var(--panel)}
-.policy-suggest{background:var(--warn-bg);border:1px solid #fde68a;color:#78350f;padding:8px 12px;border-radius:4px;font-size:11px;margin-bottom:8px;display:none}
-.policy-suggest.visible{display:block}
-.policy-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
-.policy-chip{background:var(--bg);border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:999px;font-size:10px;font-weight:500;cursor:pointer;transition:all .15s}
-.policy-chip:hover{background:#eef2ff;border-color:var(--accent);color:var(--accent)}
-.active-amendment{display:none;background:var(--warn-bg);border:1px solid #fde68a;border-radius:6px;padding:10px 12px;margin-top:10px;font-size:11px;color:#78350f}
-.active-amendment.visible{display:block}
-.active-amendment strong{color:#b45309}
 </style>
 </head>
 <body>
 <header>
   <div class="brand">
-    <div class="brand-title">Fee Leakage Detector</div>
-    <div class="brand-sub">UPLOAD</div>
+    <div class="brand-title">FeeRecon</div>
+    <div class="brand-sub">DEMO RUN</div>
   </div>
   <nav>
     <a href="/">Home</a>
-    <a href="demo.html">Demo</a>
-    <a href="upload.html" class="active">Upload</a>
+    <a href="demo.html">Browse Contracts</a>
+    <a href="demo-run.html" class="active">Run Reconciliation</a>
+    <a href="upload.html">Upload</a>
     <a href="https://github.com/ManyaJain111/feerecon-razorpay-buildathon/" target="_blank">GitHub</a>
     <button class="btn" onclick="promptApiUrl()" style="background:none;border:none;padding:5px 8px;cursor:pointer;font-size:11px">
       <span id="api-badge" style="color:var(--success)">Local</span>
@@ -255,50 +232,34 @@ tr.selected{background:#eef2ff}
 
 <main>
   <div class="page-header">
-    <h1 class="page-title">Upload contract &amp; statement</h1>
-    <p class="page-sub">Provide a pricing agreement (PDF) and a settlement report (CSV or PDF). Fee Leakage Detector will extract rules, reconcile deterministically, and produce a dispute pack.</p>
+    <div>
+      <div class="page-title" id="page-title">Run Reconciliation</div>
+      <div class="page-sub" id="page-sub">Select a sample contract from the library to begin</div>
+    </div>
+    <a href="demo.html" class="btn">← Back to contracts</a>
   </div>
 
-  <div class="upload-grid">
-    <section class="upload-col">
-      <div class="col-title"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>Contract (PDF)</div>
-      <p class="col-desc">Merchant pricing agreement. We extract tiered MDR, caps, zero-MDR instruments, conditional waivers, GST clauses.</p>
-      <div class="drop-zone" id="contract-drop" onclick="document.getElementById('contract-file').click()">
-        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <div class="drop-title">Drop contract PDF here</div>
-        <div class="drop-desc">or click to browse</div>
-        <div class="drop-formats"><span class="format-badge">.pdf</span><span class="format-badge">Max 10 MB</span></div>
-        <input type="file" id="contract-file" class="file-input" accept=".pdf" onchange="handleContractFile(event)">
+  <div class="sample-info" id="sample-info" style="display:none">
+    <div class="sample-info-header">
+      <div>
+        <div class="sample-title" id="sample-title">—</div>
+        <div class="sample-meta">
+          <span>Contract: <strong id="sample-contract" class="mono">—</strong></span>
+          <span>Statement: <strong id="sample-statement" class="mono">—</strong></span>
+          <span>Category: <strong id="sample-category">—</strong></span>
+        </div>
       </div>
-      <div class="file-info" id="contract-info">
-        <div class="file-info-header"><div><div class="file-info-title" id="contract-name">—</div><div class="file-info-meta" id="contract-meta">—</div></div><button class="file-remove" onclick="removeContract()">×</button></div>
-      </div>
-    </section>
-
-    <section class="upload-col">
-      <div class="col-title"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>Settlement (CSV / PDF)</div>
-      <p class="col-desc">Gateway settlement report. Supports Razorpay, Stripe, PayU CSV and PDF statements.</p>
-      <div class="drop-zone" id="statement-drop" onclick="document.getElementById('statement-file').click()">
-        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        <div class="drop-title">Drop settlement CSV/PDF here</div>
-        <div class="drop-desc">or click to browse</div>
-        <div class="drop-formats"><span class="format-badge">.csv</span><span class="format-badge">.pdf</span><span class="format-badge">Max 50 MB</span></div>
-        <input type="file" id="statement-file" class="file-input" accept=".csv,.pdf" onchange="handleStatementFile(event)">
-      </div>
-      <div class="file-info" id="statement-info">
-        <div class="file-info-header"><div><div class="file-info-title" id="statement-name">—</div><div class="file-info-meta" id="statement-meta">—</div></div><button class="file-remove" onclick="removeStatement()">×</button></div>
-      </div>
-    </section>
+      <a id="download-stmt-btn" href="#" class="btn" download>Download Statement CSV</a>
+    </div>
   </div>
 
-  <!-- Pipeline progress (shown during and after processing) -->
   <div class="pipeline-steps" id="pipeline-steps">
     <div class="pipeline-steps-title">Pipeline progress</div>
     <div class="steps-track">
-      <div class="step-item" id="step-upload">
+      <div class="step-item" id="step-load">
         <div class="step-dot">1</div>
-        <div class="step-label">Upload</div>
-        <div class="step-sub">Files received</div>
+        <div class="step-label">Load Sample</div>
+        <div class="step-sub">Fetch contract & statement</div>
       </div>
       <div class="step-item" id="step-extract">
         <div class="step-dot">2</div>
@@ -320,11 +281,6 @@ tr.selected{background:#eef2ff}
         <div class="step-label">Classify</div>
         <div class="step-sub">LEAK / MATCH</div>
       </div>
-      <div class="step-item" id="step-dispute">
-        <div class="step-dot">6</div>
-        <div class="step-label">Dispute Draft</div>
-        <div class="step-sub">Clause citations</div>
-      </div>
       <div class="step-item" id="step-done">
         <div class="step-dot">✓</div>
         <div class="step-label">Complete</div>
@@ -333,26 +289,25 @@ tr.selected{background:#eef2ff}
     </div>
   </div>
 
-  <!-- File validation (structure only, no company matching) -->
   <div class="validation-card" id="validation-card">
     <div class="validation-header">
       <div class="validation-status" id="validation-status"></div>
-      <div><div class="validation-title" id="validation-title">Files ready</div><div class="validation-details" id="validation-details">Both files uploaded successfully — ready to run reconciliation</div></div>
+      <div><div class="validation-title" id="validation-title">Sample loaded</div><div class="validation-details" id="validation-details">Ready to run reconciliation</div></div>
     </div>
     <div class="validation-grid" id="validation-grid"></div>
   </div>
 
   <div class="action-bar">
-    <button class="btn" onclick="resetUpload()">Clear</button>
-    <button class="btn btn-primary" id="process-btn" onclick="processFiles()" disabled>
+    <button class="btn" onclick="resetRun()">Clear</button>
+    <button class="btn btn-primary" id="process-btn" onclick="processSample()" disabled>
       <span id="process-btn-text">Run reconciliation</span>
       <svg id="process-spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-linecap="round"/></svg>
     </button>
-    <a href="demo.html" class="btn">← Try demo</a>
+    <a href="demo.html" class="btn">← Browse contracts</a>
   </div>
 
-<section class="results-section" id="results-section">
-    <div class="policy-override-card" id="policy-override-card">
+  <section class="results-section" id="results-section">
+    <div class="policy-override-card">
       <div class="policy-head">
         <div class="policy-title">
           <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
@@ -379,8 +334,16 @@ tr.selected{background:#eef2ff}
       </div>
     </div>
 
+    <div class="rules-display" id="rules-display" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="col-title" style="margin-bottom:0">Extracted rate schedule</div>
+        <a id="export-audit-btn" href="#" class="btn" download>Export audit CSV</a>
+      </div>
+      <div class="rules-grid" id="extracted-rules"></div>
+    </div>
+
     <div class="results-tabs">
-      <button class="tab-btn active" onclick="showTab('summary')">Summary & rules</button>
+      <button class="tab-btn active" onclick="showTab('summary')">Summary</button>
       <button class="tab-btn" onclick="showTab('exceptions')">Exceptions</button>
       <button class="tab-btn" onclick="showTab('dispute')">Dispute pack</button>
     </div>
@@ -391,10 +354,6 @@ tr.selected{background:#eef2ff}
         <div class="kpi-box"><div class="kpi-title">Leaks</div><div class="kpi-val" id="r-exceptions" style="color:var(--danger)">0</div><div class="kpi-sub">Flagged</div></div>
         <div class="kpi-box"><div class="kpi-title">Matched</div><div class="kpi-val" id="r-matched" style="color:var(--success)">0</div><div class="kpi-sub" id="r-match-rate">0.0%</div></div>
         <div class="kpi-box"><div class="kpi-title">GMV</div><div class="kpi-val" id="r-gmv">₹0.00</div><div class="kpi-sub" id="r-total">0 txns</div></div>
-      </div>
-      <div class="rules-display">
-        <div class="col-title" style="margin-bottom:10px"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>Extracted rate schedule</div>
-        <div class="rules-grid" id="extracted-rules"></div>
       </div>
     </div>
 
@@ -407,6 +366,7 @@ tr.selected{background:#eef2ff}
               <button class="filter-btn active" onclick="setResultFilter('LEAK', this)">Leaks (<span id="rf-leak">0</span>)</button>
               <button class="filter-btn" onclick="setResultFilter('ALL', this)">All (<span id="rf-all">0</span>)</button>
               <button class="filter-btn" onclick="setResultFilter('MATCH', this)">Matched (<span id="rf-match">0</span>)</button>
+              <button class="filter-btn" onclick="setResultFilter('EXCEPTION', this)">Exceptions (<span id="rf-exception">0</span>)</button>
             </div>
             <input type="text" class="search-input" id="result-search" placeholder="Search…" oninput="renderResultTable()">
           </div>
@@ -446,11 +406,12 @@ tr.selected{background:#eef2ff}
 </div>
 
 <script>
-let contractFile=null, statementFile=null, reconciliationResult=null;
+let reconciliationResult=null;
 let apiBase = localStorage.getItem('API_BASE_URL') || '';
 let currentFilter='LEAK', expandedTxnId=null;
 let rawDisputeMD = '';
 let disputeViewMode = 'rendered';
+let currentSampleId = new URLSearchParams(window.location.search).get('sample') || '1';
 let activeAmendment = null;
 
 function escapeHTML(str){
@@ -489,6 +450,238 @@ function toggleDisputeViewMode(){
   renderDisputeContent();
 }
 
+function apiUrl(endpoint){ if(!apiBase) return endpoint; const base=apiBase.endsWith('/')?apiBase.slice(0,-1):apiBase; const path=endpoint.startsWith('/')?endpoint:'/'+endpoint; return `${base}${path}`; }
+function showLoading(text,sub){ document.getElementById('loading-text').textContent=text; document.getElementById('loading-sub').textContent=sub; document.getElementById('loading-overlay').classList.add('visible'); }
+function hideLoading(){ document.getElementById('loading-overlay').classList.remove('visible'); }
+function updateApiBadge(){ document.getElementById('api-badge').textContent=apiBase?'Remote':'Local'; }
+function promptApiUrl(){ const entered=prompt('Backend API URL (e.g. https://your-backend.onrender.com) or empty for same-origin:',apiBase); if(entered!==null){ apiBase=entered.trim(); if(apiBase) localStorage.setItem('API_BASE_URL',apiBase); else localStorage.removeItem('API_BASE_URL'); updateApiBadge(); loadSampleInfo(); } }
+
+const STEPS = ['load','extract','parse','reconcile','classify','done'];
+function setPipelineStep(activeStep) {
+  document.getElementById('pipeline-steps').classList.add('visible');
+  const activeIdx = STEPS.indexOf(activeStep);
+  STEPS.forEach((s,i) => {
+    const el = document.getElementById('step-' + s);
+    el.classList.remove('done','active');
+    if (i < activeIdx) el.classList.add('done');
+    else if (i === activeIdx) el.classList.add('active');
+  });
+}
+function completePipeline() {
+  STEPS.forEach(s => {
+    const el = document.getElementById('step-' + s);
+    el.classList.remove('active');
+    el.classList.add('done');
+  });
+}
+
+function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+async function loadSampleInfo(){
+  try{
+    const res = await fetch(apiUrl('/api/sample-pdfs'));
+    const data = await res.json();
+    const sample = data.samples.find(s => String(s.id) === String(currentSampleId) || s.filename === String(currentSampleId));
+    if(!sample) throw new Error(`Sample "${currentSampleId}" not found in catalog`);
+
+    document.getElementById('page-title').textContent = `Run Reconciliation — ${sample.title}`;
+    document.getElementById('page-sub').textContent = sample.description;
+    document.getElementById('sample-title').textContent = sample.title;
+    document.getElementById('sample-contract').textContent = sample.filename;
+    const stmtName = sample.sample_statement_path ? sample.sample_statement_path.split('/').pop() : (sample.statement_file ? sample.statement_file.split('/').pop() : 'Statement CSV');
+    document.getElementById('sample-statement').textContent = stmtName;
+    document.getElementById('sample-category').textContent = sample.category;
+    document.getElementById('download-stmt-btn').href = apiUrl(`/api/download-statement/${currentSampleId}`);
+    const exportBtn = document.getElementById('export-audit-btn');
+    if(exportBtn) exportBtn.href = apiUrl('/api/export-audit');
+    document.getElementById('sample-info').style.display = 'block';
+
+    const vCard = document.getElementById('validation-card');
+    if(vCard) {
+      vCard.classList.add('visible');
+      const vStatus = document.getElementById('validation-status');
+      if(vStatus) vStatus.className = 'validation-status success';
+      const vTitle = document.getElementById('validation-title');
+      if(vTitle) vTitle.textContent = 'Sample contract loaded';
+      const vDetails = document.getElementById('validation-details');
+      if(vDetails) vDetails.textContent = `${sample.title} ready for deterministic reconciliation`;
+      const grid = document.getElementById('validation-grid');
+      if(grid) {
+        grid.innerHTML = [
+          {label:'Contract', value: sample.filename, pass:true},
+          {label:'Category', value: sample.category, pass:true},
+          {label:'Statement', value: stmtName, pass:true},
+          {label:'Pipeline', value: 'Ready to reconcile', pass:true}
+        ].map(c=>`<div class="validation-item ${c.pass?'pass':'fail'}"><div class="validation-label">${c.label}</div><div class="validation-value" style="color:${c.pass?'var(--success)':'var(--danger)'}">${c.value}</div></div>`).join('');
+      }
+    }
+    document.getElementById('process-btn').disabled = false;
+    processSample();
+  }catch(err){
+    console.error('Error in loadSampleInfo:', err);
+    document.getElementById('page-title').textContent = 'Error loading sample';
+    document.getElementById('page-sub').textContent = err.message;
+  }
+}
+
+async function processSample(){
+  const btn=document.getElementById('process-btn');
+  const btnText=document.getElementById('process-btn-text');
+  const spinner=document.getElementById('process-spinner');
+  btn.disabled=true; btnText.textContent='Processing…'; spinner.style.display='inline-block';
+  activeAmendment = null;
+  document.getElementById('active-amendment').classList.remove('visible');
+  document.getElementById('policy-prompt-input').value='';
+
+  try{
+    setPipelineStep('load');
+    showLoading('Loading sample','Fetching contract and statement…');
+    await delay(300);
+
+    setPipelineStep('extract');
+    showLoading('Extracting rules','Parsing contract with offline parser…');
+    await delay(350);
+
+    setPipelineStep('parse');
+    showLoading('Parsing statement','Loading transactions…');
+    await delay(300);
+
+    const res=await fetch(apiUrl('/api/load-sample'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sample_id:currentSampleId})});
+    const data=await res.json();
+    if(data.error) throw new Error(data.error);
+
+    setPipelineStep('reconcile');
+    showLoading('Reconciling','Deterministic fee engine running…');
+    await delay(400);
+
+    setPipelineStep('classify');
+    showLoading('Classifying','LEAK / MATCH / EXCEPTION per transaction…');
+    await delay(300);
+
+    completePipeline();
+    reconciliationResult=data;
+    showResults(data);
+  } catch(err){
+    STEPS.forEach(s=>{ const el=document.getElementById('step-'+s); el.classList.remove('done','active'); });
+    document.getElementById('pipeline-steps').classList.remove('visible');
+    alert('Processing error: '+err.message);
+  } finally{
+    btn.disabled=false;
+    btnText.textContent='Re-run reconciliation';
+    spinner.style.display='none';
+    hideLoading();
+  }
+}
+
+function showResults(data){
+  document.getElementById('results-section').classList.add('visible');
+  const {summary,rules_used,records,dispute_draft}=data;
+  document.getElementById('r-overcharge').textContent=`₹${(summary.total_leakage||0).toLocaleString('en-IN',{minimumFractionDigits:2})}`;
+  document.getElementById('r-exceptions').textContent=summary.leak_count||0;
+  document.getElementById('r-matched').textContent=summary.match_count||0;
+  document.getElementById('r-match-rate').textContent=`${summary.match_rate_pct||0}%`;
+  document.getElementById('r-total').textContent=`${summary.total_records||0} txns`;
+  document.getElementById('r-gmv').textContent=`₹${(summary.total_gmv||0).toLocaleString('en-IN',{minimumFractionDigits:2})}`;
+  document.getElementById('rf-leak').textContent=summary.leak_count||0;
+  document.getElementById('rf-all').textContent=summary.total_records||0;
+  document.getElementById('rf-match').textContent=summary.match_count||0;
+  if(document.getElementById('rf-exception')) {
+    document.getElementById('rf-exception').textContent=summary.exception_count||0;
+  }
+  renderRules(rules_used);
+  allRecords=records||[];
+  currentFilter = (summary.leak_count > 0) ? 'LEAK' : 'ALL';
+  document.querySelectorAll('#tab-exceptions .filter-btn').forEach(b => {
+    b.classList.remove('active');
+    if((currentFilter === 'LEAK' && b.textContent.includes('Leaks')) || (currentFilter === 'ALL' && b.textContent.includes('All'))) {
+      b.classList.add('active');
+    }
+  });
+  renderResultTable();
+  rawDisputeMD = dispute_draft || '';
+  disputeViewMode = 'rendered';
+  const viewBtn = document.getElementById('dispute-view-btn');
+  if(viewBtn) viewBtn.textContent = 'View raw markdown';
+  renderDisputeContent();
+  const rulesDisp = document.getElementById('rules-display');
+  if(rulesDisp) rulesDisp.style.display = 'block';
+  document.getElementById('results-section').scrollIntoView({behavior:'smooth'});
+}
+
+function renderRules(rules){
+  if(!rules) return;
+  const grid=document.getElementById('extracted-rules');
+  if(!grid) return;
+  const pms=rules.rules?.payment_methods||{};
+  let html='';
+  for(const [pm,conf] of Object.entries(pms)){
+    let rateStr=`${conf.rate_pct??0}%`;
+    if(conf.type==='tiered_volume') rateStr='Tiered 1.50%–2.00%';
+    if(conf.type==='interchange_plus') rateStr=`Interchange+ ${conf.rate_pct??0}%`;
+    if(conf.type==='blended_tiered') rateStr='Blended tiered 2.30%–2.90%';
+    if(conf.type==='blended_plus_markup') rateStr=`${conf.rate_pct??0}% + fixed`;
+    if(conf.fee_cap) rateStr+=` (Cap ₹${conf.fee_cap})`;
+    if(conf.fixed_fee) rateStr+=` + ₹${conf.fixed_fee}/txn`;
+    const clause=conf.source_span||conf.type||'Extracted';
+    const pageRef=conf.page_number?` (p.${conf.page_number})`:'';
+    html+=`<div class="rule-card"><div class="rule-card-title">${pm}</div><div class="rule-card-rate">${rateStr}</div><div class="rule-card-clause">${clause}${pageRef}</div></div>`;
+  }
+  grid.innerHTML=html||'<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:16px">No rules extracted</div>';
+}
+
+let allRecords=[];
+function showTab(tab){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('visible')); document.querySelector(`.tab-btn[onclick*="${tab}"]`)?.classList.add('active'); document.getElementById(`tab-${tab}`).classList.add('visible'); }
+function setResultFilter(f,btn){ currentFilter=f; document.querySelectorAll('#tab-exceptions .filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderResultTable(); }
+function getClauseRef(pm){ const map={'UPI':'Clause 1.1','DOMESTIC_CARD':'Clause 1.2','NETBANKING':'Clause 1.3','INTERNATIONAL_CARD':'Clause 1.4','WALLET':'Clause 1.5','BNPL':'Clause 1.6','LOCAL_METHOD':'Clause 2.1','BANK_TRANSFER':'Clause 2.2','ACH':'Clause 2.3','MULTI_CURRENCY':'Clause 3.1','INSTANT_PAYOUT':'Clause 3.2'}; return map[pm]||'Clause 1.0'; }
+function renderResultTable(){
+  const q=(document.getElementById('result-search').value||'').toLowerCase();
+  const filtered=allRecords.filter(r=>{
+    if(currentFilter==='LEAK'&&r.status!=='LEAK') return false;
+    if(currentFilter==='MATCH'&&r.status!=='MATCH') return false;
+    if(currentFilter==='EXCEPTION'&&r.status!=='EXCEPTION') return false;
+    if(q){
+      return r.txn_id.toLowerCase().includes(q)||
+             r.payment_method.toLowerCase().includes(q)||
+             (r.reason&&r.reason.toLowerCase().includes(q));
+    }
+    return true;
+  });
+  const tbody=document.getElementById('result-table-body');
+  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="8" class="empty-state">No records match filter</td></tr>'; return; }
+  let html=''; filtered.forEach(r=>{
+    const isLeak=r.status==='LEAK';
+    const isException=r.status==='EXCEPTION';
+    const badgeClass=isLeak?'status-leak':(r.status==='MATCH'?'status-match':'status-exception');
+    const statusText=r.status;
+    const billed=r.billed_total!==null&&r.billed_total!==undefined?`₹${Number(r.billed_total).toFixed(2)}`:'—';
+    const expected=r.expected_total!==null&&r.expected_total!==undefined?`₹${Number(r.expected_total).toFixed(2)}`:'—';
+    const delta=r.delta>0?`+₹${Number(r.delta).toFixed(2)}`:(r.delta!=null?`₹${Number(r.delta).toFixed(2)}`:'—');
+    const isSel=expandedTxnId===r.txn_id;
+    const clauseRef=getClauseRef(r.payment_method);
+    html+=`<tr class="${isSel?'selected':''}" onclick="toggleResultRow('${r.txn_id}')"><td><span class="status-badge ${badgeClass}">${statusText}</span></td><td class="mono"><strong>${r.txn_id}</strong></td><td><strong>${r.payment_method}</strong></td><td class="mono" style="text-align:right">₹${Number(r.amount).toFixed(2)}</td><td class="mono" style="text-align:right">${billed}</td><td class="mono" style="text-align:right">${expected}</td><td class="mono" style="text-align:right;${r.delta>0?'color:var(--danger);font-weight:700':''}">${delta}</td><td><span class="clause-chip">${clauseRef}</span><span style="color:${isLeak?'var(--danger)':(isException?'var(--warn)':'var(--muted)')}">${r.reason||'Match'}</span></td></tr>`;
+    if(isSel){ html+=`<tr class="detail-row"><td colspan="8" style="padding:0"><div class="detail-drawer"><div class="detail-head"><span class="detail-title">Audit trace — ${r.txn_id}</span><span class="detail-delta">Delta: ${delta}</span></div><div class="detail-formula"><strong>Formula:</strong> ${r.formula_audit||'N/A'}<br><strong>Expected:</strong> Base ₹${r.expected_fee??0} + GST ₹${r.expected_gst??0} = <strong>₹${Number(r.expected_total??0).toFixed(2)}</strong><br><strong>Billed:</strong> Base ₹${r.billed_fee??0} + GST ₹${r.billed_gst??0} = <strong>₹${Number(r.billed_total??0).toFixed(2)}</strong></div><div class="detail-evidence"><strong>Contract clause:</strong> ${clauseRef} — ${r.reason}${r.policy_note?'<br><strong style="color:var(--warn)">Policy override:</strong> '+r.policy_note:''}${r.source_span?'<br><strong>Source text:</strong> "'+r.source_span+'"':''}</div></div></td></tr>`; }
+  });
+  tbody.innerHTML=html;
+}
+function toggleResultRow(txnId){ expandedTxnId=expandedTxnId===txnId?null:txnId; renderResultTable(); }
+
+function resetRun(){
+  reconciliationResult=null; allRecords=[];
+  rawDisputeMD = '';
+  disputeViewMode = 'rendered';
+  const viewBtn = document.getElementById('dispute-view-btn');
+  if(viewBtn) viewBtn.textContent = 'View raw markdown';
+  renderDisputeContent();
+  document.getElementById('pipeline-steps').classList.remove('visible');
+  STEPS.forEach(s=>{ const el=document.getElementById('step-'+s); el.classList.remove('done','active'); });
+  document.getElementById('results-section').classList.remove('visible');
+  document.getElementById('process-btn').disabled=true;
+  document.getElementById('process-btn-text').textContent='Run reconciliation';
+  document.getElementById('process-spinner').style.display='none';
+  showTab('summary');
+  loadSampleInfo();
+}
+
 function setPolicyDirective(text){
   document.getElementById('policy-prompt-input').value = text;
   applyPolicyPrompt();
@@ -502,19 +695,19 @@ async function applyPolicyPrompt(){
   try{
     const res = await fetch(apiUrl('/api/apply-nlp-policy'), {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({prompt, sample_id: 'custom'})
+      body:JSON.stringify({prompt, sample_id:currentSampleId})
     });
     const data = await res.json();
     if(data.error) throw new Error(data.error);
-    
+
     allRecords = data.records;
     activeAmendment = data.policy_metadata;
-    
+
     const banner = document.getElementById('active-amendment');
     banner.classList.add('visible');
     document.getElementById('active-amendment-text').textContent = `"${data.policy_metadata.original_prompt}"`;
     document.getElementById('active-amendment-changes').textContent = `Applied: ${data.policy_metadata.applied_changes.join(' • ')}`;
-    
+
     renderRules(data.rules_used);
     updateKPIs(data.summary);
     renderResultTable();
@@ -534,7 +727,7 @@ function revertPolicy(){
   activeAmendment = null;
   document.getElementById('active-amendment').classList.remove('visible');
   document.getElementById('policy-prompt-input').value = '';
-  processFiles();
+  processSample();
 }
 
 function updateKPIs(summary){
@@ -549,267 +742,39 @@ function updateKPIs(summary){
   document.getElementById('rf-match').textContent = summary.match_count||0;
 }
 
-function apiUrl(endpoint){ if(!apiBase) return endpoint; const base=apiBase.endsWith('/')?apiBase.slice(0,-1):apiBase; const path=endpoint.startsWith('/')?endpoint:'/'+endpoint; return `${base}${path}`; }
-function showLoading(text,sub){ document.getElementById('loading-text').textContent=text; document.getElementById('loading-sub').textContent=sub; document.getElementById('loading-overlay').classList.add('visible'); }
-function hideLoading(){ document.getElementById('loading-overlay').classList.remove('visible'); }
-function updateApiBadge(){ document.getElementById('api-badge').textContent=apiBase?'Remote':'Local'; }
-function promptApiUrl(){ const entered=prompt('Backend API URL (e.g. https://your-backend.onrender.com) or empty for same-origin:',apiBase); if(entered!==null){ apiBase=entered.trim(); if(apiBase) localStorage.setItem('API_BASE_URL',apiBase); else localStorage.removeItem('API_BASE_URL'); updateApiBadge(); } }
-
-// ── Pipeline step management ─────────────────────────────────────────────────
-const STEPS = ['upload','extract','parse','reconcile','classify','dispute','done'];
-function setPipelineStep(activeStep) {
-  document.getElementById('pipeline-steps').classList.add('visible');
-  const activeIdx = STEPS.indexOf(activeStep);
-  STEPS.forEach((s,i) => {
-    const el = document.getElementById('step-' + s);
-    el.classList.remove('done','active');
-    if (i < activeIdx) el.classList.add('done');
-    else if (i === activeIdx) el.classList.add('active');
-  });
-}
-function completePipeline() {
-  STEPS.forEach(s => {
-    const el = document.getElementById('step-' + s);
-    el.classList.remove('active');
-    el.classList.add('done');
-  });
-}
-
-// ── File handling ────────────────────────────────────────────────────────────
-function handleContractFile(e){
-  const file=e.target.files[0]; if(!file) return;
-  if(!file.name.toLowerCase().endsWith('.pdf')){ alert('Contract must be a PDF'); e.target.value=''; return; }
-  contractFile=file;
-  document.getElementById('contract-name').textContent=file.name;
-  document.getElementById('contract-meta').textContent=`${(file.size/1024/1024).toFixed(2)} MB`;
-  document.getElementById('contract-info').classList.add('visible');
-  document.getElementById('contract-drop').classList.add('valid');
-  checkBothReady();
-}
-
-function handleStatementFile(e){
-  const file=e.target.files[0]; if(!file) return;
-  const ext=file.name.toLowerCase().split('.').pop();
-  if(!['csv','pdf'].includes(ext)){ alert('Statement must be CSV or PDF'); e.target.value=''; return; }
-  statementFile=file;
-  document.getElementById('statement-name').textContent=file.name;
-  document.getElementById('statement-meta').textContent=`${(file.size/1024/1024).toFixed(2)} MB • ${ext.toUpperCase()}`;
-  document.getElementById('statement-info').classList.add('visible');
-  document.getElementById('statement-drop').classList.add('valid');
-  checkBothReady();
-}
-
-function checkBothReady(){
-  if(!contractFile || !statementFile){ document.getElementById('process-btn').disabled=true; return; }
-  // Show validation card with file info (no company match required)
-  const vCard = document.getElementById('validation-card');
-  vCard.classList.add('visible');
-  document.getElementById('validation-status').className='validation-status success';
-  document.getElementById('validation-title').textContent='Files ready';
-  document.getElementById('validation-details').textContent='Both files uploaded — ready to run reconciliation';
-  const grid = document.getElementById('validation-grid');
-  const contractExt = contractFile.name.split('.').pop().toUpperCase();
-  const stmtExt = statementFile.name.split('.').pop().toUpperCase();
-  grid.innerHTML = [
-    {label:'Contract', value: contractFile.name, pass:true},
-    {label:'Contract type', value: contractExt, pass: contractExt==='PDF'},
-    {label:'Statement', value: statementFile.name, pass:true},
-    {label:'Statement type', value: stmtExt, pass: ['CSV','PDF'].includes(stmtExt)},
-    {label:'Contract size', value: `${(contractFile.size/1024).toFixed(0)} KB`, pass: contractFile.size > 100},
-    {label:'Statement size', value: `${(statementFile.size/1024).toFixed(0)} KB`, pass: statementFile.size > 10},
-  ].map(c=>`<div class="validation-item ${c.pass?'pass':'fail'}"><div class="validation-label">${c.label}</div><div class="validation-value" style="color:${c.pass?'var(--success)':'var(--danger)'}">${c.value}</div></div>`).join('');
-  document.getElementById('process-btn').disabled=false;
-}
-
-function removeContract(){
-  contractFile=null;
-  document.getElementById('contract-file').value='';
-  document.getElementById('contract-info').classList.remove('visible');
-  document.getElementById('contract-drop').classList.remove('valid','error');
-  resetValidation();
-}
-function removeStatement(){
-  statementFile=null;
-  document.getElementById('statement-file').value='';
-  document.getElementById('statement-info').classList.remove('visible');
-  document.getElementById('statement-drop').classList.remove('valid','error');
-  resetValidation();
-}
-function resetValidation(){
-  document.getElementById('validation-card').classList.remove('visible');
-  document.getElementById('process-btn').disabled=true;
-}
-
-// ── Main processing ──────────────────────────────────────────────────────────
-async function processFiles(){
-  if(!contractFile||!statementFile) return;
-  const btn=document.getElementById('process-btn');
-  const btnText=document.getElementById('process-btn-text');
-  const spinner=document.getElementById('process-spinner');
-  btn.disabled=true; btnText.textContent='Processing…'; spinner.style.display='inline-block';
-
-  // Step 1: Upload
-  setPipelineStep('upload');
-  showLoading('Uploading files','Sending to server…');
-  await delay(300);
-
-  try{
-    const fd=new FormData();
-    fd.append('contract',contractFile);
-    fd.append('statement',statementFile);
-
-    // Step 2: Extract rules (show while waiting for server)
-    setPipelineStep('extract');
-    showLoading('Extracting rules','Parsing contract PDF with offline parser…');
-
-    const res=await fetch(apiUrl('/api/process-upload'),{method:'POST',body:fd});
-    const data=await res.json();
-
-    if(data.error) throw new Error(data.error);
-
-    // Step 3-6: Animate remaining steps (server already done, animate for UX)
-    setPipelineStep('parse');
-    showLoading('Parsing statement',`Loading ${data.summary?.total_records||'?'} transactions…`);
-    await delay(350);
-
-    setPipelineStep('reconcile');
-    showLoading('Reconciling','Deterministic fee engine running…');
-    await delay(400);
-
-    setPipelineStep('classify');
-    showLoading('Classifying',`LEAK / MATCH / EXCEPTION per transaction…`);
-    await delay(300);
-
-    setPipelineStep('dispute');
-    showLoading('Generating dispute pack','Citing contract clauses…');
-    await delay(350);
-
-    completePipeline();
-    reconciliationResult=data;
-    showResults(data);
-  } catch(err){
-    // Reset pipeline on error
-    STEPS.forEach(s=>{ const el=document.getElementById('step-'+s); el.classList.remove('done','active'); });
-    document.getElementById('pipeline-steps').classList.remove('visible');
-    alert('Processing error: '+err.message);
-  } finally{
-    btn.disabled=false;
-    btnText.textContent='Re-run reconciliation';
-    spinner.style.display='none';
-    hideLoading();
-  }
-}
-
-function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-function showResults(data){
-  document.getElementById('results-section').classList.add('visible');
-  const {summary,rules_used,records,dispute_draft}=data;
-  document.getElementById('r-overcharge').textContent=`₹${(summary.total_leakage||0).toLocaleString('en-IN',{minimumFractionDigits:2})}`;
-  document.getElementById('r-exceptions').textContent=summary.leak_count||0;
-  document.getElementById('r-matched').textContent=summary.match_count||0;
-  document.getElementById('r-match-rate').textContent=`${summary.match_rate_pct||0}%`;
-  document.getElementById('r-total').textContent=`${summary.total_records||0} txns`;
-  document.getElementById('r-gmv').textContent=`₹${(summary.total_gmv||0).toLocaleString('en-IN',{minimumFractionDigits:2})}`;
-  document.getElementById('rf-leak').textContent=summary.leak_count||0;
-  document.getElementById('rf-all').textContent=summary.total_records||0;
-  document.getElementById('rf-match').textContent=summary.match_count||0;
-  renderRules(rules_used);
-  allRecords=records||[]; renderResultTable();
-  rawDisputeMD = dispute_draft || '';
-  disputeViewMode = 'rendered';
-  activeAmendment = null;
-  document.getElementById('active-amendment').classList.remove('visible');
-  document.getElementById('policy-prompt-input').value = '';
-  const viewBtn = document.getElementById('dispute-view-btn');
-  if(viewBtn) viewBtn.textContent = 'View raw markdown';
-  renderDisputeContent();
-  document.getElementById('results-section').scrollIntoView({behavior:'smooth'});
-}
-
-function renderRules(rules){
-  if(!rules) return;
-  const grid=document.getElementById('extracted-rules');
-  const pms=rules.rules?.payment_methods||{};
-  let html='';
-  for(const [pm,conf] of Object.entries(pms)){
-    let rateStr=`${conf.rate_pct??0}%`;
-    if(conf.type==='tiered_volume') rateStr='Tiered 1.50%–2.00%';
-    if(conf.fee_cap) rateStr+=` (Cap ₹${conf.fee_cap})`;
-    if(conf.fixed_fee) rateStr+=` + ₹${conf.fixed_fee}/txn`;
-    const clause=conf.source_span||conf.type||'Extracted';
-    const pageRef=conf.page_number?` (p.${conf.page_number})`:'';
-    html+=`<div class="rule-card"><div class="rule-card-title">${pm}</div><div class="rule-card-rate">${rateStr}</div><div class="rule-card-clause">${clause}${pageRef}</div></div>`;
-  }
-  grid.innerHTML=html||'<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:16px">No rules extracted</div>';
-}
-
-let allRecords=[];
-function showTab(tab){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('visible')); document.querySelector(`.tab-btn[onclick*="${tab}"]`)?.classList.add('active'); document.getElementById(`tab-${tab}`).classList.add('visible'); }
-function setResultFilter(f,btn){ currentFilter=f; document.querySelectorAll('#tab-exceptions .filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderResultTable(); }
-function getClauseRef(pm){ const map={'UPI':'Clause 1.1 (p.3)','DOMESTIC_CARD':'Clause 1.2 (p.4)','NETBANKING':'Clause 1.3 (p.5)','INTERNATIONAL_CARD':'Clause 1.4 (p.6)','WALLET':'Clause 1.5 (p.7)'}; return map[pm]||'Clause 1.0'; }
-function renderResultTable(){
-  const q=(document.getElementById('result-search').value||'').toLowerCase();
-  const filtered=allRecords.filter(r=>{ if(currentFilter==='LEAK'&&r.status!=='LEAK') return false; if(currentFilter==='MATCH'&&r.status!=='MATCH') return false; if(q){ return r.txn_id.toLowerCase().includes(q)||r.payment_method.toLowerCase().includes(q)||(r.reason&&r.reason.toLowerCase().includes(q)); } return true; });
-  const tbody=document.getElementById('result-table-body');
-  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="8" class="empty-state">No records match filter</td></tr>'; return; }
-  let html=''; filtered.forEach(r=>{ const isLeak=r.status==='LEAK'; const badgeClass=isLeak?'status-leak':(r.status==='MATCH'?'status-match':'status-exception'); const statusText=isLeak?'LEAK':r.status; const billed=r.billed_total!==null&&r.billed_total!==undefined?`₹${Number(r.billed_total).toFixed(2)}`:'—'; const expected=r.expected_total!==null&&r.expected_total!==undefined?`₹${Number(r.expected_total).toFixed(2)}`:'—'; const delta=r.delta>0?`+₹${Number(r.delta).toFixed(2)}`:(r.delta!=null?`₹${Number(r.delta).toFixed(2)}`:'—'); const isSel=expandedTxnId===r.txn_id; const clauseRef=getClauseRef(r.payment_method);
-    html+=`<tr class="${isSel?'selected':''}" onclick="toggleResultRow('${r.txn_id}')"><td><span class="status-badge ${badgeClass}">${statusText}</span></td><td class="mono"><strong>${r.txn_id}</strong></td><td><strong>${r.payment_method}</strong></td><td class="mono" style="text-align:right">₹${Number(r.amount).toFixed(2)}</td><td class="mono" style="text-align:right">${billed}</td><td class="mono" style="text-align:right">${expected}</td><td class="mono" style="text-align:right;${r.delta>0?'color:var(--danger);font-weight:700':''}">${delta}</td><td><span class="clause-chip">${clauseRef}</span><span style="color:${isLeak?'var(--danger)':'var(--muted)'}">${r.reason||'Match'}</span></td></tr>`;
-    if(isSel){ html+=`<tr class="detail-row"><td colspan="8" style="padding:0"><div class="detail-drawer"><div class="detail-head"><span class="detail-title">Audit trace — ${r.txn_id}</span><span class="detail-delta">Delta: ${delta}</span></div><div class="detail-formula"><strong>Formula:</strong> ${r.formula_audit||'N/A'}<br><strong>Expected:</strong> Base ₹${r.expected_fee??0} + GST ₹${r.expected_gst??0} = <strong>₹${Number(r.expected_total??0).toFixed(2)}</strong><br><strong>Billed:</strong> Base ₹${r.billed_fee??0} + GST ₹${r.billed_gst??0} = <strong>₹${Number(r.billed_total??0).toFixed(2)}</strong></div><div class="detail-evidence"><strong>Contract clause:</strong> ${clauseRef} — ${r.reason}${r.policy_note?'<br><strong style="color:var(--warn)">Policy override:</strong> '+r.policy_note:''}${r.source_span?'<br><strong>Source text:</strong> "'+r.source_span+'"':''}</div></div></td></tr>`; }
-  }); tbody.innerHTML=html;
-}
-function toggleResultRow(txnId){ expandedTxnId=expandedTxnId===txnId?null:txnId; renderResultTable(); }
-
-function resetUpload(){
-  contractFile=statementFile=null; reconciliationResult=null; allRecords=[];
-  rawDisputeMD = '';
-  disputeViewMode = 'rendered';
-  activeAmendment = null;
-  document.getElementById('active-amendment').classList.remove('visible');
-  document.getElementById('policy-prompt-input').value = '';
-  const viewBtn = document.getElementById('dispute-view-btn');
-  if(viewBtn) viewBtn.textContent = 'View raw markdown';
-  renderDisputeContent();
-  document.getElementById('contract-file').value='';
-  document.getElementById('statement-file').value='';
-  document.getElementById('contract-info').classList.remove('visible');
-  document.getElementById('statement-info').classList.remove('visible');
-  document.getElementById('contract-drop').classList.remove('valid','error');
-  document.getElementById('statement-drop').classList.remove('valid','error');
-  document.getElementById('validation-card').classList.remove('visible');
-  document.getElementById('pipeline-steps').classList.remove('visible');
-  STEPS.forEach(s=>{ const el=document.getElementById('step-'+s); el.classList.remove('done','active'); });
-  document.getElementById('results-section').classList.remove('visible');
-  document.getElementById('process-btn').disabled=true;
-  document.getElementById('process-btn-text').textContent='Run reconciliation';
-  document.getElementById('process-spinner').style.display='none';
-  showTab('summary');
-}
-
 function copyDisputeMD(){
   const content = rawDisputeMD;
-  if(!content){
-    alert('No dispute draft available to copy');
-    return;
-  }
+  if(!content){ alert('No dispute draft available to copy'); return; }
   navigator.clipboard.writeText(content);
   alert('Copied markdown to clipboard');
 }
+
 function downloadDisputeMD(){
   const content = rawDisputeMD;
-  if(!content){
-    alert('No dispute draft available to download');
-    return;
-  }
+  if(!content){ alert('No dispute draft available to download'); return; }
   const blob = new Blob([content],{type:'text/markdown'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `dispute_claim_${Date.now()}.md`;
+  a.download = `dispute_claim_${currentSampleId}_${Date.now()}.md`;
   a.click();
   URL.revokeObjectURL(url);
 }
-function downloadDisputeCSV(){ if(!reconciliationResult) return; const leaks=(reconciliationResult.records||[]).filter(r=>r.status==='LEAK'); if(!leaks.length){ alert('No leaks to export'); return; } const headers=['Txn ID','Date','Instrument','GMV','Billed Fee','Expected Fee','Overcharge','Clause','Reason']; const rows=leaks.map(r=>[r.txn_id,r.date||'',r.payment_method,Number(r.amount).toFixed(2),Number(r.billed_total||0).toFixed(2),Number(r.expected_total||0).toFixed(2),Number(r.delta||0).toFixed(2),getClauseRef(r.payment_method),r.reason||'']); const csv=[headers.join(','),...rows.map(r=>r.join(','))].join('\n'); const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`dispute_schedule_${Date.now()}.csv`; a.click(); URL.revokeObjectURL(url); }
+
+function downloadDisputeCSV(){
+  if(!reconciliationResult) return;
+  const leaks=(reconciliationResult.records||[]).filter(r=>r.status==='LEAK');
+  if(!leaks.length){ alert('No leaks to export'); return; }
+  const headers=['Txn ID','Date','Instrument','GMV','Billed Fee','Expected Fee','Overcharge','Clause','Reason'];
+  const rows=leaks.map(r=>[r.txn_id,r.date||'',r.payment_method,Number(r.amount).toFixed(2),Number(r.billed_total||0).toFixed(2),Number(r.expected_total||0).toFixed(2),Number(r.delta||0).toFixed(2),getClauseRef(r.payment_method),r.reason||'']);
+  const csv=[headers.join(','),...rows.map(r=>r.join(','))].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`dispute_schedule_${currentSampleId}_${Date.now()}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
 function openDisputeModal(){
   const content = document.getElementById('dispute-full-content');
   if(rawDisputeMD && window.marked){
@@ -820,10 +785,14 @@ function openDisputeModal(){
   }
   document.getElementById('dispute-modal').classList.add('open');
 }
-function closeDisputeModal(e){ if(e&&e.target!==e.currentTarget) return; document.getElementById('dispute-modal').classList.remove('open'); }
 
-['contract-drop','statement-drop'].forEach(id=>{ const el=document.getElementById(id); el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('drag-over');}); el.addEventListener('dragleave',e=>{e.preventDefault();el.classList.remove('drag-over');}); el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('drag-over'); const file=e.dataTransfer.files[0]; if(id==='contract-drop'){ if(file?.name?.toLowerCase().endsWith('.pdf')){ document.getElementById('contract-file').files=e.dataTransfer.files; handleContractFile({target:{files:e.dataTransfer.files}}); } }else{ const ext=file?.name?.toLowerCase().split('.').pop(); if(['csv','pdf'].includes(ext)){ document.getElementById('statement-file').files=e.dataTransfer.files; handleStatementFile({target:{files:e.dataTransfer.files}}); } } }); });
+function closeDisputeModal(e){
+  if(e&&e.target!==e.currentTarget) return;
+  document.getElementById('dispute-modal').classList.remove('open');
+}
+
 updateApiBadge();
+loadSampleInfo();
 </script>
 </body>
 </html>

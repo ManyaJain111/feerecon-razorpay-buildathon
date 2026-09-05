@@ -99,6 +99,56 @@ SAMPLE_PDF_CATALOG = [
         "statement_file": "data/statement_4_btpanorama.csv",
         "rules_file": "data/rules_4_btpanorama.json",
         "sample_statement_path": "sample_pdf/4_account_statement.csv"
+    },
+    {
+        "id": "5",
+        "filename": "5.pdf",
+        "title": "Stripe Payment Processing Agreement",
+        "category": "Payment Gateway / Fintech",
+        "description": "Standard Stripe pricing for card-present, card-not-present, international cards, ACH, and instant payouts with volume discounts.",
+        "statement_file": "data/statement_5_stripe.csv",
+        "rules_file": "data/rules_5_stripe.json",
+        "sample_statement_path": "sample_pdf/5_account_statement.csv"
+    },
+    {
+        "id": "6",
+        "filename": "6.pdf",
+        "title": "PayU India Merchant Agreement",
+        "category": "Payment Gateway / India",
+        "description": "Domestic card MDR, UPI zero-MDR, netbanking caps, wallet/BNPL rates, and instant settlement surcharges for Indian merchants.",
+        "statement_file": "data/statement_6_payu.csv",
+        "rules_file": "data/rules_6_payu.json",
+        "sample_statement_path": "sample_pdf/6_account_statement.csv"
+    },
+    {
+        "id": "7",
+        "filename": "7.pdf",
+        "title": "Razorpay Standard Pricing Schedule",
+        "category": "Payment Gateway / India",
+        "description": "Card MDR tiers, UPI zero-MDR, netbanking fee cap, international card surcharge, instant settlement, and refund fee waiver window.",
+        "statement_file": "data/statement_7_razorpay.csv",
+        "rules_file": "data/rules_7_razorpay.json",
+        "sample_statement_path": "sample_pdf/7_account_statement.csv"
+    },
+    {
+        "id": "8",
+        "filename": "8.pdf",
+        "title": "Adyen Unified Commerce Fee Schedule",
+        "category": "Payment Gateway / Global",
+        "description": "Interchange++ pricing, scheme fees, cross-border markup, 3DS authentication fees, and marketplace split settlement charges.",
+        "statement_file": "data/statement_8_adyen.csv",
+        "rules_file": "data/rules_8_adyen.json",
+        "sample_statement_path": "sample_pdf/8_account_statement.csv"
+    },
+    {
+        "id": "9",
+        "filename": "9.pdf",
+        "title": "Worldpay Global Processing Agreement",
+        "category": "Payment Gateway / Enterprise",
+        "description": "Blended rate pricing, tiered volume discounts, chargeback fees, refund processing, and multi-currency settlement markups.",
+        "statement_file": "data/statement_9_worldpay.csv",
+        "rules_file": "data/rules_9_worldpay.json",
+        "sample_statement_path": "sample_pdf/9_account_statement.csv"
     }
 ]
 
@@ -130,6 +180,8 @@ def run_reconciliation(settlement_path_or_records, rules_override=None, batch_id
     summary = reporter.compute_summary()
     reporter.export_audit_trail_csv("reports/audit_trail.csv")
 
+    dispute_draft = generate_dispute_draft(classified_records, contract_info=rules_data, batch_id=batch_id)
+
     return {
         "summary": summary,
         "performance": {
@@ -137,7 +189,8 @@ def run_reconciliation(settlement_path_or_records, rules_override=None, batch_id
             "throughput_txns_sec": round(len(records) / (elapsed_ms / 1000.0), 1) if elapsed_ms > 0 else 0
         },
         "records": classified_records,
-        "rules_used": rules_data
+        "rules_used": rules_data,
+        "dispute_draft": dispute_draft
     }
 
 def apply_policy_prompt(rules_data: Dict[str, Any], prompt: str) -> Tuple[Dict[str, Any], List[str]]:
@@ -297,14 +350,24 @@ class ReconcileHTTPHandler(BaseHTTPRequestHandler):
             self.send_error(404, "Not found")
             return
 
-        if path in ["/", "/index.html"]:
+        if path in ["/", "/index.html", "/welcome", "/welcome.html"]:
             index_path = str(STATIC_DIR / "index.html")
             self._send_file(index_path, "text/html; charset=utf-8")
             return
 
-        if path == "/welcome":
-            welcome_path = str(BASE_DIR / "frontend" / "welcome.html")
-            self._send_file(welcome_path, "text/html; charset=utf-8")
+        if path in ["/demo-run.html", "/demo-run"]:
+            demo_run_path = str(STATIC_DIR / "demo-run.html")
+            self._send_file(demo_run_path, "text/html; charset=utf-8")
+            return
+
+        if path in ["/demo.html", "/demo"]:
+            demo_path = str(STATIC_DIR / "demo.html")
+            self._send_file(demo_path, "text/html; charset=utf-8")
+            return
+
+        if path in ["/upload.html", "/upload"]:
+            upload_path = str(STATIC_DIR / "upload.html")
+            self._send_file(upload_path, "text/html; charset=utf-8")
             return
 
         if path.startswith("/static/"):
@@ -738,9 +801,10 @@ def create_app():
         return "<html><body><h1>Payment Fee Reconciliation API</h1><p>API is running. Access <a href='/docs'>/docs</a> for Swagger UI.</p></body></html>"
 
     @app.get("/welcome.html", response_class=HTMLResponse)
-    def welcome_html_redirect():
+    @app.get("/welcome", response_class=HTMLResponse)
+    def welcome_redirect():
         from fastapi.responses import RedirectResponse
-        return RedirectResponse(url="/welcome")
+        return RedirectResponse(url="/")
 
     @app.get("/demo.html", response_class=HTMLResponse)
     def demo_page():
@@ -758,13 +822,17 @@ def create_app():
                 return f.read()
         return HTMLResponse("<html><body><h1>Upload page not found</h1></body></html>", status_code=404)
 
-    @app.get("/welcome", response_class=HTMLResponse)
-    def welcome_page():
-        welcome_file = BASE_DIR / "frontend" / "welcome.html"
-        if welcome_file.exists():
-            with open(welcome_file, "r", encoding="utf-8") as f:
+    @app.get("/demo-run.html", response_class=HTMLResponse)
+    def demo_run_page():
+        demo_run_file = STATIC_DIR / "demo-run.html"
+        if demo_run_file.exists():
+            with open(demo_run_file, "r", encoding="utf-8") as f:
                 return f.read()
-        return HTMLResponse("<html><body><h1>Welcome page not found</h1></body></html>", status_code=404)
+        return HTMLResponse("<html><body><h1>Demo run page not found</h1></body></html>", status_code=404)
+
+    @app.get("/demo-run", response_class=HTMLResponse)
+    def demo_run_page_alt():
+        return demo_run_page()
 
     @app.get("/api/reconciliation")
     def get_reconciliation():

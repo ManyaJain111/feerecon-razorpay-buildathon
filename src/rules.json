@@ -116,7 +116,5 @@
       "needs_review": false,
       "status": "verified"
     }
-  },
-  "effective_from": "2025-01-01",
-  "effective_to": "9999-12-31"
+  }
 }

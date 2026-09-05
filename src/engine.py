@@ -63,13 +63,14 @@ def calculate_expected_fee(txn: Dict[str, Any], rules_data: Dict[str, Any]) -> D
     applied_needs_review = pm_rule.get("needs_review", False)
 
     # 3. Calculate Base Processing / MDR Fee
-    if rule_type == "flat":
+    if rule_type in ("flat", "interchange_plus", "blended_plus_markup"):
         rate_pct = float(pm_rule.get("rate_pct", 0.0))
         fixed_fee = float(pm_rule.get("fixed_fee", 0.0))
         base_fee = (amt * (rate_pct / 100.0)) + fixed_fee
-        formula_parts.append(f"{pm} flat {rate_pct}% + ₹{fixed_fee:.2f} = ₹{base_fee:.2f}")
+        label = "interchange+" if rule_type == "interchange_plus" else ("blended" if rule_type == "blended_plus_markup" else "flat")
+        formula_parts.append(f"{pm} {label} {rate_pct}% + ₹{fixed_fee:.2f} = ₹{base_fee:.2f}")
 
-    elif rule_type == "tiered_volume":
+    elif rule_type in ("tiered_volume", "blended_tiered"):
         tiers = pm_rule.get("tiers", [])
         applied_rate = None
         applied_tier_name = ""
@@ -93,7 +94,7 @@ def calculate_expected_fee(txn: Dict[str, Any], rules_data: Dict[str, Any]) -> D
                     break
         
         if applied_rate is None:
-            applied_rate = float(tiers[0].get("rate_pct", 2.0))
+            applied_rate = float(tiers[0].get("rate_pct", 2.0)) if tiers else 2.0
             applied_tier_name = "Default Tier"
 
         base_fee = amt * (applied_rate / 100.0)
@@ -102,12 +103,13 @@ def calculate_expected_fee(txn: Dict[str, Any], rules_data: Dict[str, Any]) -> D
     elif rule_type == "flat_with_cap":
         rate_pct = float(pm_rule.get("rate_pct", 0.0))
         fee_cap = pm_rule.get("fee_cap")
+        fixed_fee = float(pm_rule.get("fixed_fee", 0.0))
         calc = amt * (rate_pct / 100.0)
         if fee_cap is not None and calc > float(fee_cap):
-            base_fee = float(fee_cap)
-            formula_parts.append(f"Calculated ₹{calc:.2f} capped at max fee ₹{base_fee:.2f}")
+            base_fee = float(fee_cap) + fixed_fee
+            formula_parts.append(f"Calculated ₹{calc:.2f} capped at max fee ₹{float(fee_cap):.2f}")
         else:
-            base_fee = calc
+            base_fee = calc + fixed_fee
             formula_parts.append(f"{rate_pct}% fee = ₹{base_fee:.2f}")
 
     elif rule_type == "flat_plus_fixed":

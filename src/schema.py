@@ -10,6 +10,11 @@ class PaymentMethodEnum(str, Enum):
     NETBANKING = "NETBANKING"
     WALLET = "WALLET"
     BNPL = "BNPL"
+    ACH = "ACH"
+    INSTANT_PAYOUT = "INSTANT_PAYOUT"
+    LOCAL_METHOD = "LOCAL_METHOD"
+    BANK_TRANSFER = "BANK_TRANSFER"
+    MULTI_CURRENCY = "MULTI_CURRENCY"
     OTHER = "OTHER"
 
     @classmethod
@@ -42,7 +47,18 @@ class PaymentMethodEnum(str, Enum):
             "BNPL": cls.WALLET,
             "SIMPL": cls.WALLET,
             "LAZYPAY": cls.WALLET,
+            "ACH": cls.ACH,
+            "ACH_DEBIT": cls.ACH,
+            "ACH_DIRECT_DEBIT": cls.ACH,
+            "INSTANT_PAYOUT": cls.INSTANT_PAYOUT,
+            "INSTANT_SETTLEMENT": cls.INSTANT_PAYOUT,
+            "LOCAL_METHOD": cls.LOCAL_METHOD,
+            "BANK_TRANSFER": cls.BANK_TRANSFER,
+            "WIRE_TRANSFER": cls.BANK_TRANSFER,
+            "MULTI_CURRENCY": cls.MULTI_CURRENCY,
         }
+        if cleaned in cls.__members__:
+            return cls[cleaned]
         return aliases.get(cleaned, cls.OTHER)
 
 class LeakTypeEnum(str, Enum):

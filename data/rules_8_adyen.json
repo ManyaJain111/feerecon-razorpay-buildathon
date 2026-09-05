@@ -1,0 +1,69 @@
+{
+  "contract_id": "ADYEN-EU-2025-001",
+  "merchant_name": "Adyen N.V.",
+  "effective_date": "2025-01-01",
+  "version": "1.0",
+  "rules": {
+    "payment_methods": {
+      "DOMESTIC_CARD": {
+        "type": "interchange_plus",
+        "rate_pct": 0.6,
+        "fixed_fee": 0.10,
+        "confidence": 0.98,
+        "source_span": "Interchange++ pricing: Interchange + 0.60% scheme fee + €0.10 processing fee.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "INTERNATIONAL_CARD": {
+        "type": "interchange_plus",
+        "rate_pct": 1.1,
+        "fixed_fee": 0.15,
+        "confidence": 0.97,
+        "source_span": "Cross-border: Interchange + 1.10% scheme fee + €0.15 processing fee.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "LOCAL_METHOD": {
+        "type": "flat",
+        "rate_pct": 1.5,
+        "fixed_fee": 0.25,
+        "confidence": 0.96,
+        "source_span": "Local payment methods (iDEAL, Bancontact, etc.): 1.50% + €0.25.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      },
+      "BANK_TRANSFER": {
+        "type": "flat",
+        "rate_pct": 0.3,
+        "fixed_fee": 0.20,
+        "confidence": 0.95,
+        "source_span": "SEPA bank transfers at 0.30% + €0.20 per transaction.",
+        "extraction_method": "rule_based",
+        "needs_review": false
+      }
+    },
+    "refund_policy": {
+      "standard_fee": 0.0,
+      "waiver_window_hours": 0.0,
+      "waived_fee": 0.0,
+      "confidence": 0.99,
+      "source_span": "Refunds processed at no additional cost. Original fees not refunded.",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    },
+    "chargeback_fee": {
+      "amount": 25.0,
+      "confidence": 0.98,
+      "source_span": "Chargeback fee €25 per dispute.",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    },
+    "statutory_tax": {
+      "gst_rate_pct": 0.0,
+      "confidence": 0.99,
+      "source_span": "VAT applies based on EU jurisdiction. Reverse charge for B2B.",
+      "extraction_method": "rule_based",
+      "needs_review": false
+    }
+  }
+}

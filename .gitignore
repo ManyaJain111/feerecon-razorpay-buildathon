@@ -67,3 +67,4 @@ dmypy.json
 *.tar.gz
 *.whl
 
+AGENTS.md
