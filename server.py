@@ -54,6 +54,46 @@ def set_nim_api_key(key: str) -> None:
         _runtime_nim_key = key.strip() if key else None
 
 
+# ---------------------------------------------------------------------------
+# Firebase Admin initialization with JSON service account authentication
+# ---------------------------------------------------------------------------
+_firebase_app = None
+_firebase_lock = threading.Lock()
+
+def get_firebase_app():
+    global _firebase_app
+    with _firebase_lock:
+        if _firebase_app is not None:
+            return _firebase_app
+        try:
+            import firebase_admin
+            from firebase_admin import credentials, auth as fb_auth, _apps
+            cred_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "firebase_service_account.json")
+            if os.path.exists(cred_path):
+                cred = credentials.Certificate(cred_path)
+                _firebase_app = firebase_admin.initialize_app(cred, name="fee-recon")
+                return _firebase_app
+            elif _apps:
+                _firebase_app = _apps[0]
+                return _firebase_app
+            else:
+                _firebase_app = None
+                return None
+        except Exception:
+            return None
+
+def verify_firebase_id_token(id_token: str) -> Optional[Dict[str, Any]]:
+    app = get_firebase_app()
+    if not app:
+        return None
+    try:
+        import firebase_admin.auth as fb_auth
+        decoded = fb_auth.verify_id_token(id_token)
+        return decoded
+    except Exception:
+        return None
+
+
 STATIC_DIR = BASE_DIR / "static"
 CONTRACT_PATH = "data/contract.md"
 SETTLEMENT_PATH = "data/settlement.csv"
@@ -1078,6 +1118,48 @@ def create_app():
             return compute_metrics_fn()
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
+
+    # -----------------------------------------------------------------------
+    # Firebase Authentication Endpoints (JSON service account based)
+    # -----------------------------------------------------------------------
+    @app.post("/api/auth/verify-token")
+    async def verify_token(payload: Dict[str, Any]):
+        """Verify a Firebase ID token issued by the client SDK."""
+        token = str(payload.get("idToken", "")).strip()
+        if not token:
+            raise HTTPException(status_code=400, detail="idToken required")
+        decoded = verify_firebase_id_token(token)
+        if not decoded:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        return {
+            "valid": True,
+            "uid": decoded.get("uid"),
+            "email": decoded.get("email"),
+            "email_verified": decoded.get("email_verified", False),
+            "claims": decoded
+        }
+
+    @app.get("/api/auth/firebase-config")
+    async def firebase_config():
+        """Serve client Firebase config (public values) for JS SDK init."""
+        return {
+            "apiKey": "AIzaSyChttv8rSbph4gYE_pLu-BS-FbGfO80-fg",
+            "authDomain": "cookiecucci.firebaseapp.com",
+            "projectId": "cookiecucci",
+            "storageBucket": "cookiecucci.firebasestorage.app",
+            "messagingSenderId": "150622262136",
+            "appId": "1:150622262136:web:0f44df249537c5d3f26e8d",
+            "measurementId": "G-GTG11SF0L0"
+        }
+
+    @app.get("/api/auth/status")
+    async def auth_status():
+        """Check if Firebase Admin is initialized with service account JSON."""
+        app = get_firebase_app()
+        return {
+            "initialized": app is not None,
+            "service_account_path": os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "firebase_service_account.json")
+        }
 
     return app
 

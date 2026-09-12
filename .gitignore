@@ -48,6 +48,7 @@ reports/
 .env
 .env.local
 .env.*.local
+firebase_service_account.json
 
 # Coverage
 .coverage
